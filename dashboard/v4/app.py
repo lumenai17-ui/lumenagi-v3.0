@@ -1,71 +1,71 @@
 #!/usr/bin/env python3
 """
-LumenAGI Dashboard v4.0 — Definitive Agent Observatory
-Hybrid: GPU-hot realtime + Langfuse observability + Mission Control SWARM
+LumenAGI Dashboard v4.3 — Optimized Fullscreen Observatory
+===========================================================
+
+Mejoras v4.3:
+- Sistema CPU/RAM/Disco (reemplaza GPU Processes)
+- GPU Utilization con barra (como VRAM)
+- Token Tracking emulado con datos realistas
+- Cost Tracking emulado ($0 para Qwen local)
+- Layout ajustado para mejor espaciado
 """
 
-import asyncio
 import json
-import os
 import subprocess
+import time
+import psutil
+import os
+import random
 from datetime import datetime
 from pathlib import Path
-from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional
-
-from flask import Flask, jsonify, render_template, send_from_directory
-from flask_sock import Sock
+from collections import deque
+from flask import Flask, jsonify, send_from_directory, request, send_file
+from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
-sock = Sock(app)
+app.config['SECRET_KEY'] = 'lumenagi-v4-secret'
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 BASE_DIR = Path(__file__).parent
-AGENTS_DIR = Path.home() / ".openclaw/agents"
 
-@dataclass
-class GPUMetrics:
-    timestamp: str
-    device: str
-    used_mb: int
-    free_mb: int
-    total_mb: int
-    utilization: int
-    temperature: int
-    power_draw: float
-    clock_graphics: int
-    clock_memory: int
-    processes: List[dict]
+# Histórico de métricas
+gpu_history = deque(maxlen=60)
+agent_activity = {'kimi': deque(maxlen=60), 'qwen': deque(maxlen=60), 'api': deque(maxlen=60)}
 
-@dataclass 
-class AgentTrace:
-    agent_id: str
-    model: str
-    task: str
-    status: str
-    start_time: str
-    end_time: Optional[str]
-    tokens_in: int
-    tokens_out: int
-    cost_usd: float
-    latency_ms: int
+# Token tracker con datos iniciales emulados (realistas para sesión)
+token_tracker = {
+    'kimi': {'input': 2847, 'output': 1923, 'cost': 0.0},
+    'qwen': {'input': 45231, 'output': 28947, 'cost': 0.0},  # Local = mucho uso
+    'gpt4o': {'input': 1245, 'output': 876, 'cost': 0.0}
+}
 
-@dataclass
-class SystemState:
-    gpu: Optional[GPUMetrics]
-    agents: List[AgentTrace]
-    swarm_status: dict
+# Incrementos por segundo (emulación realista)
+token_rates = {
+    'kimi': {'input': 3, 'output': 2},      # Coordinador intermitente
+    'qwen': {'input': 45, 'output': 28},    # Trabajo constante local
+    'gpt4o': {'input': 1, 'output': 1}      # API ocasional
+}
 
-# ============================================================================
-# GPU MONITORING (adaptado de gpu-hot: NVML interface)
-# ============================================================================
+# Estado SWARM
+swarm_state = {
+    'coordinator': {'active': False, 'task': None, 'vram_mb': 0, 'tokens_last_min': 0},
+    'research': {'active': False, 'task': None, 'vram_mb': 0, 'tokens_last_min': 0},
+    'build': {'active': False, 'task': None, 'vram_mb': 0, 'tokens_last_min': 0},
+    'create': {'active': False, 'task': None, 'vram_mb': 0, 'tokens_last_min': 0}
+}
 
-def get_gpu_metrics() -> Optional[GPUMetrics]:
-    """Captura métricas GPU en tiempo real usando nvidia-smi"""
+traces = deque(maxlen=20)
+
+def add_trace(agent, task, status, details=""):
+    traces.append({'timestamp': datetime.now().isoformat(), 'agent': agent, 'task': task, 'status': status, 'details': details})
+
+def get_gpu_metrics():
+    """GPU metrics via nvidia-smi"""
     try:
-        # Query extendido: memoria, utilización, temperatura, power, clocks, procesos
         result = subprocess.run([
             'nvidia-smi', 
-            '--query-gpu=timestamp,name,memory.used,memory.free,memory.total,utilization.gpu,temperature.gpu,power.draw,clocks.gr,clocks.mem',
+            '--query-gpu=name,memory.used,memory.total,utilization.gpu,temperature.gpu,power.draw,power.limit',
             '--format=csv,noheader,nounits'
         ], capture_output=True, text=True, timeout=3)
         
@@ -73,213 +73,234 @@ def get_gpu_metrics() -> Optional[GPUMetrics]:
             return None
             
         parts = result.stdout.strip().split(', ')
-        timestamp, device, used, free, total, util, temp, power, clock_g, clock_m = parts
+        device, used, total, util, temp, power, power_limit = parts
         
-        # Procesos activos en GPU
-        proc_result = subprocess.run([
-            'nvidia-smi',
-            '--query-compute-apps=pid,process_name,used_memory',
-            '--format=csv,noheader'
-        ], capture_output=True, text=True, timeout=3)
-        
-        processes = []
-        if proc_result.returncode == 0:
-            for line in proc_result.stdout.strip().split('\n'):
-                if line:
-                    pid, name, mem = line.split(', ')
-                    processes.append({
-                        'pid': pid,
-                        'name': name.split('/')[-1][:30],  # Solo basename, truncado
-                        'memory_mb': int(mem)
-                    })
-        
-        return GPUMetrics(
-            timestamp=timestamp,
-            device=device,
-            used_mb=int(used),
-            free_mb=int(free),
-            total_mb=int(total),
-            utilization=int(util),
-            temperature=int(temp),
-            power_draw=float(power) if power != '[N/A]' else 0.0,
-            clock_graphics=int(clock_g),
-            clock_memory=int(clock_m),
-            processes=processes[:5]  # Top 5 procesos
-        )
+        return {
+            'device': device,
+            'used_mb': int(used),
+            'total_mb': int(total),
+            'utilization': int(util),
+            'temperature': int(temp),
+            'power_draw': float(power) if power != '[N/A]' else 0.0,
+            'power_limit': float(power_limit) if power_limit != '[N/A]' else 0.0
+        }
     except Exception as e:
-        print(f"GPU metrics error: {e}")
+        print(f"[GPU Error] {e}")
         return None
 
-def get_ollama_models() -> List[str]:
-    """Detecta modelos cargados en ollama"""
+def get_ollama_models():
+    """Loaded Ollama models"""
     try:
-        result = subprocess.run(['ollama', 'ps'], capture_output=True, text=True, timeout=5)
-        lines = result.stdout.strip().split('\n')[1:]  # Skip header
-        models = []
-        for line in lines:
-            if line.strip():
-                parts = line.split()
-                if len(parts) >= 2:
-                    models.append(parts[0])
-        return models
-    except:
-        return []
+        result = subprocess.run(['curl', '-s', 'http://127.0.0.1:11434/api/ps'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            return [{'name': m.get('name'), 'size': m.get('size', 0), 'vram': m.get('size_vram', 0), 'expires': m.get('expires_at', 'unknown')} for m in data.get('models', [])]
+    except Exception as e:
+        print(f"[Ollama Error] {e}")
+    return []
 
-# ============================================================================
-# AGENT OBSERVABILITY (adaptado de Langfuse: traces, costs)
-# ============================================================================
-
-def get_agent_traces(limit: int = 10) -> List[AgentTrace]:
-    """Obtiene trazas recientes de agentes desde filesystem"""
-    traces = []
-    agents = ['main', 'research-qwen32', 'build-qwen32', 'create-qwen32']
-    
-    for agent_name in agents:
-        agent_dir = AGENTS_DIR / agent_name / "sessions"
-        if not agent_dir.exists():
-            continue
-            
-        # Buscar sesiones recientes
-        sessions = sorted(agent_dir.glob("*.jsonl"), key=os.path.getmtime, reverse=True)
+def get_system_stats():
+    """CPU, RAM, Disk stats"""
+    try:
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
         
-        for session_file in sessions[:2]:  # Últimas 2 sesiones
-            try:
-                with open(session_file, 'r') as f:
-                    lines = f.readlines()
-                    if not lines:
-                        continue
-                    
-                    # Parsear última entrada para métricas
-                    last_entry = json.loads(lines[-1])
-                    
-                    traces.append(AgentTrace(
-                        agent_id=agent_name,
-                        model=last_entry.get('model', 'unknown'),
-                        task=last_entry.get('task', 'unknown')[:50],
-                        status='running' if last_entry.get('status') == 'in_progress' else 'completed',
-                        start_time=last_entry.get('start_time', datetime.now().isoformat()),
-                        end_time=last_entry.get('end_time'),
-                        tokens_in=last_entry.get('tokens_in', 0),
-                        tokens_out=last_entry.get('tokens_out', 0),
-                        cost_usd=last_entry.get('cost_usd', 0.0),
-                        latency_ms=last_entry.get('latency_ms', 0)
-                    ))
-            except:
-                pass
-    
-    return sorted(traces, key=lambda x: x.start_time, reverse=True)[:limit]
+        return {
+            'cpu': {'percent': cpu_percent, 'cores': psutil.cpu_count()},
+            'ram': {'used_gb': memory.used / (1024**3), 'total_gb': memory.total / (1024**3), 'percent': memory.percent},
+            'disk': {'used_gb': disk.used / (1024**3), 'total_gb': disk.total / (1024**3), 'percent': (disk.used / disk.total) * 100}
+        }
+    except Exception as e:
+        print(f"[System Error] {e}")
+        return None
 
-def get_swarm_status() -> dict:
-    """Estado del SWARM de agentes"""
-    status = {
-        'coordinator': 'main',
-        'coordinator_model': 'kimi-2.5:cloud',
-        'workers': [],
-        'gpu_exclusive': 'qwen2.5:32b',
-        'multimedia': 'external-apis'
+def get_network_traffic():
+    """Network traffic"""
+    try:
+        net_io = psutil.net_io_counters()
+        return {
+            'bytes_sent': net_io.bytes_sent,
+            'bytes_recv': net_io.bytes_recv,
+        }
+    except:
+        return None
+
+def update_swarm_state():
+    """Update SWARM states"""
+    ollama_models = get_ollama_models()
+    
+    for model in ollama_models:
+        if 'qwen' in model['name'].lower():
+            swarm_state['build'].update({'active': True, 'vram_mb': model.get('vram', 20000)})
+            swarm_state['create'].update({'active': True, 'vram_mb': model.get('vram', 20000)})
+            swarm_state['research'].update({'active': True, 'vram_mb': 0})
+
+def emulate_token_increments():
+    """Emulate realistic token usage increments"""
+    for agent in ['kimi', 'qwen', 'gpt4o']:
+        # Variación aleatoria ±30%
+        in_inc = int(token_rates[agent]['input'] * random.uniform(0.7, 1.3))
+        out_inc = int(token_rates[agent]['output'] * random.uniform(0.7, 1.3))
+        
+        token_tracker[agent]['input'] += in_inc
+        token_tracker[agent]['output'] += out_inc
+
+def calculate_costs():
+    """Calculate costs (Qwen is free)"""
+    PRICES = {
+        'kimi': {'input': 0.001, 'output': 0.003},     # $1-3/M tokens
+        'qwen': {'input': 0.000, 'output': 0.000},     # $0 - Local!
+        'gpt4o': {'input': 0.0025, 'output': 0.010}    # $2.5-10/M tokens
     }
     
-    for agent_name in ['research-qwen32', 'build-qwen32', 'create-qwen32']:
-        config_file = AGENTS_DIR / agent_name / "/agent/openclaw.json"
-        if config_file.exists():
-            try:
-                with open(config_file) as f:
-                    config = json.load(f)
-                    status['workers'].append({
-                        'name': agent_name,
-                        'model': config.get('model', 'unknown'),
-                        'role': agent_name.split('-')[0],
-                        'parent': config.get('parent', 'main')
-                    })
-            except:
-                pass
+    costs = {}
+    for agent, data in token_tracker.items():
+        price = PRICES.get(agent, {'input': 0, 'output': 0})
+        costs[agent] = (data['input'] / 1000) * price['input'] + (data['output'] / 1000) * price['output']
     
-    return status
-
-# ============================================================================
-# WEBSOCKET REALTIME (adaptado de gpu-hot: sub-500ms updates)
-# ============================================================================
-
-@sock.route('/ws')
-def websocket_handler(ws):
-    """WebSocket para actualizaciones en tiempo real (0.5s refresh)"""
-    import time
-    print("[WS] Client connected")
-    try:
-        while True:
-            # Obtener métricas
-            gpu_data = get_gpu_metrics()
-            ollama_data = get_ollama_models()
-            traces_data = get_agent_traces(5)
-            swarm_data = get_swarm_status()
-            
-            data = {
-                'timestamp': datetime.now().isoformat(),
-                'gpu': asdict(gpu_data) if gpu_data else None,
-                'ollama_models': ollama_data,
-                'agents': [asdict(t) for t in traces_data],
-                'swarm': swarm_data
-            }
-            
-            json_data = json.dumps(data)
-            print(f"[WS] Sending: {len(json_data)} bytes, GPU: {data['gpu'] is not None}, Ollama: {len(ollama_data)} models")
-            ws.send(json_data)
-            time.sleep(0.5)  # 500ms update rate
-    except Exception as e:
-        print(f"[WS] Error: {e}")
-        import traceback
-        traceback.print_exc()
-
-# ============================================================================
-# HTTP API ENDPOINTS
-# ============================================================================
+    return costs
 
 @app.route('/')
 def index():
     return send_from_directory(BASE_DIR, 'index.html')
 
-@app.route('/api/v1/metrics')
-def api_metrics():
-    """API REST para métricas actuales"""
-    gpu = get_gpu_metrics()
-    return jsonify({
-        'timestamp': datetime.now().isoformat(),
-        'gpu': asdict(gpu) if gpu else None,
-        'ollama': get_ollama_models(),
-        'swarm': get_swarm_status()
-    })
+@socketio.on('connect')
+def handle_connect():
+    print(f"[WS] Client connected: {datetime.now()}")
+    emit('connected', {'status': 'connected', 'timestamp': datetime.now().isoformat()})
 
-@app.route('/api/v1/agents')
-def api_agents():
-    """API para estado de agentes"""
-    return jsonify({
-        'agents': [asdict(t) for t in get_agent_traces(50)],
-        'swarm_config': get_swarm_status()
-    })
+def emit_metrics():
+    """Emit metrics every second"""
+    last_net_io = None
+    
+    while True:
+        try:
+            # GPU metrics
+            gpu = get_gpu_metrics()
+            if gpu:
+                gpu_history.append({
+                    'timestamp': datetime.now().isoformat(),
+                    'utilization': gpu['utilization'],
+                    'vram_pct': (gpu['used_mb'] / gpu['total_mb']) * 100,
+                    'temperature': gpu['temperature'],
+                    'power': gpu['power_draw']
+                })
+            
+            # System stats (CPU/RAM/Disk)
+            system_stats = get_system_stats()
+            
+            # Ollama models
+            ollama = get_ollama_models()
+            
+            # Network
+            net_io = get_network_traffic()
+            net_speed = {'up': 0, 'down': 0}
+            if last_net_io and net_io:
+                net_speed = {
+                    'up': net_io['bytes_sent'] - last_net_io['bytes_sent'],
+                    'down': net_io['bytes_recv'] - last_net_io['bytes_recv']
+                }
+            last_net_io = net_io
+            
+            # Update SWARM
+            update_swarm_state()
+            
+            # Emulate token increments
+            emulate_token_increments()
+            
+            # Calculate costs
+            costs = calculate_costs()
+            
+            # Agent activity
+            if gpu:
+                agent_activity['qwen'].append(gpu['utilization'])
+                agent_activity['kimi'].append(5 + random.randint(-2, 2))
+                agent_activity['api'].append(random.randint(0, 5))
+            
+            data = {
+                'timestamp': datetime.now().isoformat(),
+                'gpu': gpu,
+                'system': system_stats,
+                'gpu_history': list(gpu_history),
+                'ollama_models': ollama,
+                'network': {
+                    'speed_mbps': {
+                        'up': round(net_speed['up'] * 8 / 1_000_000, 2),
+                        'down': round(net_speed['down'] * 8 / 1_000_000, 2)
+                    }
+                },
+                'swarm': swarm_state,
+                'swarm_topology': {
+                    'coordinator': {'name': 'Lumen', 'model': 'kimi-2.5', 'status': 'active' if swarm_state['coordinator']['active'] else 'idle'},
+                    'workers': [
+                        {'name': 'Research', 'model': 'gpt-4o', 'vram': swarm_state['research']['vram_mb'], 'active': swarm_state['research']['active']},
+                        {'name': 'Build', 'model': 'qwen32', 'vram': swarm_state['build']['vram_mb'], 'active': swarm_state['build']['active']},
+                        {'name': 'Create', 'model': 'qwen32', 'vram': swarm_state['create']['vram_mb'], 'active': swarm_state['create']['active']}
+                    ]
+                },
+                'token_tracker': token_tracker,
+                'costs': costs,
+                'agent_activity': {
+                    'kimi': list(agent_activity['kimi']),
+                    'qwen': list(agent_activity['qwen']),
+                    'api': list(agent_activity['api'])
+                },
+                'traces': list(traces)
+            }
+            
+            socketio.emit('metrics', data)
+            
+            if gpu and system_stats:
+                print(f"[EMIT] GPU:{gpu['utilization']}% CPU:{system_stats['cpu']['percent']:.0f}% RAM:{system_stats['ram']['percent']:.0f}% Tokens:{sum(t['input']+t['output'] for t in token_tracker.values()):,}")
+            
+            time.sleep(1)
+            
+        except Exception as e:
+            print(f"[EMIT Error] {e}")
+            time.sleep(1)
 
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    return send_from_directory(BASE_DIR / 'static', filename)
+# API endpoints
+@app.route('/api/agent/start', methods=['POST'])
+def agent_start():
+    data = request.json
+    agent = data.get('agent')
+    task = data.get('task')
+    if agent in swarm_state:
+        swarm_state[agent].update({'active': True, 'task': task})
+    add_trace(agent, task, 'running')
+    return jsonify({'status': 'ok'})
 
-# ============================================================================
-# MAIN
-# ============================================================================
+@app.route('/api/agent/complete', methods=['POST'])
+def agent_complete():
+    data = request.json
+    agent = data.get('agent')
+    task = data.get('task')
+    tokens_in = data.get('tokens_input', 0)
+    tokens_out = data.get('tokens_output', 0)
+    
+    if agent in swarm_state:
+        swarm_state[agent].update({'active': False, 'task': None})
+    
+    if agent == 'coordinator':
+        token_tracker['kimi']['input'] += tokens_in
+        token_tracker['kimi']['output'] += tokens_out
+    elif agent == 'research':
+        token_tracker['gpt4o']['input'] += tokens_in
+        token_tracker['gpt4o']['output'] += tokens_out
+    else:
+        token_tracker['qwen']['input'] += tokens_in
+        token_tracker['qwen']['output'] += tokens_out
+    
+    add_trace(agent, task, 'completed', f"Tokens: {tokens_in}/{tokens_out}")
+    return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
-    # Flask-Sock requiere configuración específica
-    from gevent import pywsgi
-    from geventwebsocket.handler import WebSocketHandler
+    from threading import Thread
+    print("🚀 LumenAGI Dashboard v4.3 — Optimized Fullscreen Observatory")
+    print("📡 SocketIO: http://127.0.0.1:8766")
+    print("✨ System Stats | Emulated Token Cost | GPU Util Bar")
     
-    print("🚀 LumenAGI Dashboard v4.0 — Definitive Observatory")
-    print("📡 WebSocket: ws://127.0.0.1:8766/ws")
-    print("📊 API: http://127.0.0.1:8766/api/v1/")
-    print("🌐 Dashboard: http://127.0.0.1:8766/")
-    print("")
-    print("Features:")
-    print("  ✓ GPU realtime (0.5s) — NVML via nvidia-smi")
-    print("  ✓ Agent observability — traces, costs, latency")
-    print("  ✓ SWARM topology — visual flow")
-    print("  ✓ 128K context support monitoring")
-    
-    server = pywsgi.WSGIServer(('127.0.0.1', 8766), app, handler_class=WebSocketHandler)
-    server.serve_forever()
+    Thread(target=emit_metrics, daemon=True).start()
+    socketio.run(app, host='127.0.0.1', port=8766, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
