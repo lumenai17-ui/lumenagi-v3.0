@@ -1,0 +1,76 @@
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.key
+*.pem
+*.json.key
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+log/
+
+# Database & storage
+*.db
+*.sqlite
+*.sqlite3
+memory_db/
+*.chroma/
+chroma.sqlite3
+
+# Models (large files)
+models/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.gguf
+*.ggml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+.cache/
+
+# Node modules (if any frontend build)
+node_modules/
+
+# Dashboard specific
+dashboard/*/env/
+dashboard/*/venv/
+dashboard/*/node_modules/
+dashboard/*/__pycache__/
+dashboard/memory_db/
+
+# System
+Thumbs.db
