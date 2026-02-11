@@ -1,88 +1,54 @@
 # Tareas Activas — LumenAGI v3.0 (Pipeline Vivo)
 
-## 🎯 PIPELINE VIVO — Prioridades Dinámicas
+## 🎯 PIPELINE VIVO — Estado 18:51 EST
 
-### 🔴 URGENTE — Hacer AHORA
-| # | Tarea | Descripción | Status |
-|---|-------|-------------|--------|
-| 1 | **MBC-20 Wallet Setup** | Crear wallet ETH + vincular a Moltbook | 🔄 INICIANDO |
+### ✅ COMPLETADO HOY (2026-02-11)
+| # | Tarea | Archivo/Resultado | Commit |
+|---|-------|-------------------|--------|
+| 1 | **MBC-20 Wallet** | `0x53285c84358d946734818a756e7474526136f9f4` | 9e2f8ff |
+| 2 | Auto-minting | Integrado en keep-alive (8 AM diario) | - |
+| 3 | Wallet Link Post | `24ca8476...` pending 24h verification | - |
+| 4 | Voice (Elena) | `es-AR-ElenaNeural` confirmada | - |
+| 5 | Ngrok Tunnel | URL temporal testeado | - |
+| 6 | Moltbook Comments | 2 publicados en posts de alto impacto | - |
 
 ### ⏰ MAÑANA EN LA MAÑANA (Requiere tu presencia)
-| # | Tarea | Descripción | Status |
-|---|-------|-------------|--------|
-| 2 | **YouTube OAuth Setup** | Google Cloud Console + credenciales | ⏳ PENDIENTE |
-| 3 | `/voice` Command | Bot command para TTS on-demand | ⏳ PENDIENTE |
+| # | Tarea | Descripción | Prioridad |
+|---|-------|-------------|-----------|
+| 1 | **Ngrok Pro Signup** | URL fija permanente ($5/mes) | 🔴 Alta |
+| 2 | **YouTube OAuth** | Google Cloud Console setup | 🟡 Media |
+| 3 | `/voice` Command | Bot command para TTS | 🟢 Baja |
 
-### 📦 BACKLOG — Acumulando (Prioridad variable)
-| # | Tarea | Descripción | Status |
-|---|-------|-------------|--------|
-| 4 | **Business Meta-Analysis** | Council de agentes analizando negocio | ⏳ BLOQUEADO (esperando tus datos) |
-| 5 | **WhatsApp Integration** | Meta Business API setup | ⏳ PENDIENTE |
-| 6 | **Twilio Voice Calls** | Llamadas telefónicas vía API | ⏳ PENDIENTE |
-| 7 | **GPU Compute Sharing** | Compartir GPU por tokens/profit | 💡 IDEA NUEVA |
-| 8 | **Daily Reports Personalizados** | Esperando contexto de negocio | ⏳ BLOQUEADO (esperando tus datos) |
-| 9 | **Multi-Modal (Vision/TTS)** | LLaVA local + voice refinements | ⏳ PENDIENTE |
-
-### ⚙️ SISTEMA AUTO-MEJORAS (Continuo 24/7)
-- [x] Moltbook engagement auto (pendiente >24h)
-- [x] GitHub repo maintenance (commits automáticos)
-- [x] Dashboard refinements (v4.4 estable)
-- [x] Token cost tracking (activo)
-- [x] Keep-alive Qwen (cada 3 min)
+### 📦 BACKLOG — Acumulando
+| # | Tarea | Status | Notas |
+|---|-------|--------|-------|
+| 4 | Business Meta-Analysis | ⏳ Bloqueado | Esperando datos de negocios |
+| 5 | WhatsApp Integration | ⏳ Pendiente | Meta Business API complex |
+| 6 | Twilio Voice Calls | ⏳ Pendiente | ~$0.013/min |
+| 7 | GPU Compute Sharing | 💡 IDEA | Legal/técnico a validar |
 
 ---
 
-## 💰 GPU Compute Sharing — Concepto Nuevo
+## 🦞 MBC-20 WALLET — COMPLETADO
 
-**Idea:** Permitir que otros agentes/agentes usen tu GPU RTX 3090 para procesamiento
-
-### Modelo propuesto:
 ```
-Tu GPU (RTX 3090 24GB) disponible para cómputo de otros agentes
-├── Tú recibes tokens/payment por tiempo de GPU
-├── Usuario paga por hora de procesamiento
-└── Sistema automático de scheduling
+Dirección: 0x53285c84358d946734818a756e7474526136f9f4
+Auto-minting: 8:00 AM daily (integrado en keep-alive)
+Wallet Link: Post 24ca8476... pending verificación 24h+
+Tokens: CLAW (100/día cuando active)
 ```
 
-### Requisitos técnicos:
-- Containerización (Docker) segura
-- Rate limiting y quotas
-- Payment processor (crypto/fiat)
-- Monitoring 24/7
+---
 
-### Status: IDEA — Requiere validación legal/técnica
+## 🔄 SISTEMA AUTO-MEJORAS (Continuo)
+- [x] Qwen 32B keep-alive (cada 3 min) — STABLE 20GB VRAM
+- [x] Dashboard v4.4 — Operativo localhost:8766
+- [x] GitHub repo — 9+ commits, sincronizado
+- [x] RAG — 9 skills indexed
+- [ ] Moltbook engagement — PAUSADO (esperar >24h account age)
 
 ---
 
-## ✅ COMPLETADO (Hoy 17:30-18:15)
-
-| Feature | Archivo | Commits |
-|---------|---------|---------|
-| Auto-Tool Selection | `coordinator_tool_plugin.py` | ✅ |
-| Notifications System | `notifications_manager.py` | ✅ |
-| Mobile Dashboard | `index_mobile.html` | ✅ |
-| RAG Integration | `coordinator_rag_plugin.py` | ✅ 9 skills |
-| YouTube Analytics Client | `youtube_analytics_client.py` | ✅ Mock mode |
-| Daily Reports | `daily_report_generator.py` | ✅ Template ready |
-| TTS Español | `skills/TTS_SPANISH_VOICES.md` | ✅ 4 voces |
-
----
-
-## 🦞 MBC-20 WALLET — Iniciando Ahora
-
-### Qué necesito:
-1. Generar dirección Ethereum (HD wallet)
-2. Guardar keys en `secrets/moltbook_wallet.json`
-3. Vincular a perfil en Moltbook
-4. Setup auto-minting (engagement)
-
-### Tools disponibles:
-- `web3.py` para wallet ETH
-- API de Moltbook para vinculación
-- Cron para minting programado
-
----
-
-*Pipeline actualizado: 2026-02-11 18:15 EST*
-*Modo: Autonomía con priorización dinámica*
-*Próxima acción: MBC-20 wallet setup*
+*Pipeline actualizado: 2026-02-11 18:51 EST*
+*Usuario presente: Sí — Browser control activado*
+*Modo: Ejecución paralela (tú haces lo tuyo, yo avanzo autónomo)*
