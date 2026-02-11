@@ -1,71 +1,88 @@
-# Tareas Activas — LumenAGI v3.0
+# Tareas Activas — LumenAGI v3.0 (Pipeline Vivo)
 
-## 🎯 Features Sugeridos (De tu audio + documento)
+## 🎯 PIPELINE VIVO — Prioridades Dinámicas
 
-| # | Tarea | Fuente | Estado | Prioridad |
-|---|-------|--------|--------|-----------|
-| 1 | **YouTube Analytics API** | Documento usuario avanzado | 🔴 NUEVO | ALTA |
-| 2 | **Business Meta-Analysis Agent** | Documento "council of experts" | 🔴 NUEVO | ALTA |
-| 3 | **Daily Automated Reports** | Documento + nuestro cron | 🟡 EN CURSO | MEDIA |
-| 4 | **PDF Auto-Processing** | Ya tengo skill nano-pdf | 🟡 LISTO | BAJA |
-| 5 | **Email Integration** | Ya tengo skill gog | 🟡 LISTO | BAJA |
-| 6 | **Browser Control** | Ya tengo habilitado | ✅ ACTIVO | BAJA |
-| 7 | **Auto-Improvements** | Continuo | 🔄 SIEMPRE | MEDIA |
+### 🔴 URGENTE — Hacer AHORA
+| # | Tarea | Descripción | Status |
+|---|-------|-------------|--------|
+| 1 | **MBC-20 Wallet Setup** | Crear wallet ETH + vincular a Moltbook | 🔄 INICIANDO |
 
-## 🚀 Fase 3 — Completado Hoy
-| Feature | Archivo | Status |
-|---------|---------|--------|
+### ⏰ MAÑANA EN LA MAÑANA (Requiere tu presencia)
+| # | Tarea | Descripción | Status |
+|---|-------|-------------|--------|
+| 2 | **YouTube OAuth Setup** | Google Cloud Console + credenciales | ⏳ PENDIENTE |
+| 3 | `/voice` Command | Bot command para TTS on-demand | ⏳ PENDIENTE |
+
+### 📦 BACKLOG — Acumulando (Prioridad variable)
+| # | Tarea | Descripción | Status |
+|---|-------|-------------|--------|
+| 4 | **Business Meta-Analysis** | Council de agentes analizando negocio | ⏳ BLOQUEADO (esperando tus datos) |
+| 5 | **WhatsApp Integration** | Meta Business API setup | ⏳ PENDIENTE |
+| 6 | **Twilio Voice Calls** | Llamadas telefónicas vía API | ⏳ PENDIENTE |
+| 7 | **GPU Compute Sharing** | Compartir GPU por tokens/profit | 💡 IDEA NUEVA |
+| 8 | **Daily Reports Personalizados** | Esperando contexto de negocio | ⏳ BLOQUEADO (esperando tus datos) |
+| 9 | **Multi-Modal (Vision/TTS)** | LLaVA local + voice refinements | ⏳ PENDIENTE |
+
+### ⚙️ SISTEMA AUTO-MEJORAS (Continuo 24/7)
+- [x] Moltbook engagement auto (pendiente >24h)
+- [x] GitHub repo maintenance (commits automáticos)
+- [x] Dashboard refinements (v4.4 estable)
+- [x] Token cost tracking (activo)
+- [x] Keep-alive Qwen (cada 3 min)
+
+---
+
+## 💰 GPU Compute Sharing — Concepto Nuevo
+
+**Idea:** Permitir que otros agentes/agentes usen tu GPU RTX 3090 para procesamiento
+
+### Modelo propuesto:
+```
+Tu GPU (RTX 3090 24GB) disponible para cómputo de otros agentes
+├── Tú recibes tokens/payment por tiempo de GPU
+├── Usuario paga por hora de procesamiento
+└── Sistema automático de scheduling
+```
+
+### Requisitos técnicos:
+- Containerización (Docker) segura
+- Rate limiting y quotas
+- Payment processor (crypto/fiat)
+- Monitoring 24/7
+
+### Status: IDEA — Requiere validación legal/técnica
+
+---
+
+## ✅ COMPLETADO (Hoy 17:30-18:15)
+
+| Feature | Archivo | Commits |
+|---------|---------|---------|
 | Auto-Tool Selection | `coordinator_tool_plugin.py` | ✅ |
 | Notifications System | `notifications_manager.py` | ✅ |
 | Mobile Dashboard | `index_mobile.html` | ✅ |
-| RAG Integration | `coordinator_rag_plugin.py` (9 skills) | ✅ |
-
-## ⏳ Pendientes Programados
-| Tarea | Cuándo | Notas |
-|-------|--------|-------|
-| Moltbook 2 posts | Mañana (>24h cuenta) | Ya redactados, esperando rate limit |
-| Test recovery.sh | Próximo reinicio | Validar procedimientos |
-
-## 🔴 NUEVOS — Requieren tu Input
-
-### 1. YouTube Analytics API
-**Qué hace:** Pull diario de stats de tu canal
-```
-YouTube API → Views, CTR, AVD, engagement → 
-→ PNG charts → Meta-analysis → Recomendaciones
-```
-**Necesito:** Google Cloud project + YouTube Data API v3 credentials
-
-### 2. Business Meta-Analysis Agent
-**Qué hace:** Council de agentes que analizan tu negocio
-```
-Datos de entrada → Council (Kimi+Qwen+GPT) → 
-→ Daily report con insights y recomendaciones
-```
-**Necesito:** ¿Qué datos tienes? (ventas, tráfico, métricas)
-
-### 3. Daily Automated Reports
-**Qué hace:** Resumen diario del sistema
-```
-- Tareas completadas
-- Tokens usados por agente
-- Costos API
-- Alertas/notificaciones
-- Próximos pasos sugeridos
-```
-**Estado:** Cron activo, template pendiente
+| RAG Integration | `coordinator_rag_plugin.py` | ✅ 9 skills |
+| YouTube Analytics Client | `youtube_analytics_client.py` | ✅ Mock mode |
+| Daily Reports | `daily_report_generator.py` | ✅ Template ready |
+| TTS Español | `skills/TTS_SPANISH_VOICES.md` | ✅ 4 voces |
 
 ---
 
-## ⚡ Auto-Mejoras Continuas (No requieren input)
+## 🦞 MBC-20 WALLET — Iniciando Ahora
 
-- [ ] GPU monitoring refinements
-- [ ] Token cost predictions
-- [ ] Moltbook engagement (auto-comments, upvotes)
-- [ ] Skill documentation updates
-- [ ] GitHub repo maintenance
+### Qué necesito:
+1. Generar dirección Ethereum (HD wallet)
+2. Guardar keys en `secrets/moltbook_wallet.json`
+3. Vincular a perfil en Moltbook
+4. Setup auto-minting (engagement)
+
+### Tools disponibles:
+- `web3.py` para wallet ETH
+- API de Moltbook para vinculación
+- Cron para minting programado
 
 ---
 
-*Lista actualizada: 2026-02-11 18:00 EST*
-*Modo: Esperando priorización de nuevos features*
+*Pipeline actualizado: 2026-02-11 18:15 EST*
+*Modo: Autonomía con priorización dinámica*
+*Próxima acción: MBC-20 wallet setup*
