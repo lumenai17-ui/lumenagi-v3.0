@@ -1,220 +1,196 @@
-# 🚀 LumenAGI v3.0 — SWARM Architecture
+# 🔮 LumenAGI v4.1 — Definitive Agent Observatory
 
-[![Status](https://img.shields.io/badge/status-active-success)](https://github.com/AiLumen11006/lumenagi-v3.0)
-[![Version](https://img.shields.io/badge/version-v3.0-blue)](https://github.com/AiLumen11006/lumenagi-v3.0/releases)
-[![GPU](https://img.shields.io/badge/GPU-RTX%203090-green)](https://www.nvidia.com)
-[![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
+> Sistema SWARM autónomo con Cerebro (kimi-2.5) + Workers (qwen32) + Dashboard realtime
 
-**Multi-Agent AI System with Local Execution** — Kimi K2.5 Cerebro + Qwen 2.5 32B Local Workers
+## 🏗️ Arquitectura
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│  ARCHITECTURE: Cloud Brain (Kimi) + Local Muscle (Qwen)   │
-│  GPU: RTX 3090 24GB — 20GB VRAM dedicated to local agents │
-│  Speed: 35 tokens/sec (local), $0 runtime cost           │
-└────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    LUMENAGI v4.1                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  🧠 CEREBRO (kimi-2.5 cloud)                                │
+│     Lumen — Coordinador principal                           │
+│     │                                                       │
+│     ├──→ 🔍 @research — qwen32 (investigación)              │
+│     ├──→ 🔨 @build — qwen32 (construcción)                  │
+│     └──→ 🎨 @create — qwen32 (multimedia + APIs)            │
+│                                                             │
+│  📊 Dashboard: http://127.0.0.1:8766/                       │
+│  📱 Telegram: @Lumeniabot                                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
-
----
-
-## 🎯 What is LumenAGI?
-
-LumenAGI is an autonomous AI system designed for **real-world task execution** with a hybrid architecture:
-- **Kimi K2.5 (Cloud)** — Decision-making coordinator
-- **Qwen 2.5 32B (Local, 20GB VRAM)** — Fast, zero-cost execution
-- **Multi-Modal APIs** — Vision, images, video when needed
-
-### Key Features
-
-| Feature | Implementation | Status |
-|---------|---------------|--------|
-| **Multi-Agent Coordination** | `coordinator_swarm.py` | ✅ Active |
-| **Real-Time Dashboard** | Flask + SocketIO (port 8766) | ✅ Active |
-| **VRAM Keep-Alive** | Cron job every 3 min | ✅ Active |
-| **Skill Documentation** | 4+ reusable patterns | ✅ Documented |
-| **Vector Memory** | RAG with nomic-embed-text | 🔄 In Progress |
-| **GPU Telemetry** | nvidia-smi monitoring | ✅ Active |
-
----
-
-## 🏗️ SWARM Architecture v3.0
-
-```
-User Request
-     │
-     ▼
-┌──────────────┐
-│  Kimi Brain  │ (Cloud, Planning)
-│  Coordinator │
-└──────┬───────┘
-       │
-       ├──────────────┬──────────────┐
-       ▼              ▼              ▼
-┌──────────────┐ ┌────────────┐ ┌────────────┐
-│ Qwen 32B     │ │ GPT-4o     │ │ Vision API │
-│ Local Worker │ │ Research   │ │ Images     │
-│ Code/Parse   │ │ Complex    │ │ Video      │
-│ ~35 tok/s    │ │ Reasoning  │ │ SVD/FLUX   │
-│ $0 cost      │ │ API only   │ │ API cost   │
-└──────────────┘ └────────────┘ └────────────┘
-```
-
-**Routing Logic:**
-- Simple tasks → Qwen 32B (local, fast, free)
-- Research tasks → GPT-4o (API, powerful)
-- Vision tasks → External APIs (image/video)
-
----
-
-## 📁 Repository Structure
-
-```
-lumenagi-v3.0/
-├── 📚 skills/                    # Reusable patterns & documentation
-│   ├── SWARM_ARCHITECTURE_V3.md  # This architecture
-│   ├── DASHBOARD_V4.md           # Real-time observability
-│   ├── KEEPALIVE_OLLAMA.md       # VRAM persistence
-│   └── COORDINATOR_SWARM.md      # Multi-agent orchestrator
-│
-├── 📊 dashboard/v4/              # WebSocket dashboard
-│   ├── app_simple.py             # Flask + SocketIO server
-│   └── index.html                # Real-time UI
-│
-├── 🧠 coordinator_swarm.py       # Multi-agent coordinator
-├── 💾 memory_system.py           # Vector memory (RAG)
-│
-├── 📄 ARCHITECTURE_SWARM_v3.md   # Full architecture spec
-├── 📄 AUTO_IMPROVEMENT_PLAN.md   # AGI roadmap (Phases 1-5)
-├── 📄 AGI_PROGRESS.md            # Current progress tracker
-│
-├── 🎯 SOUL.md                    # Project philosophy
-└── 💓 HEARTBEAT.md               # Periodic checks
-```
-
----
 
 ## 🚀 Quick Start
 
-### 1. Install Ollama & Models
-
 ```bash
-# Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
+# One-command deploy
+cd ~/.openclaw/workspace
+./scripts/deploy_all.sh
 
-# Pull required models
-ollama pull qwen2.5:32b
-ollama pull kimi-k2.5:cloud  # If available locally
+# Check status
+./scripts/health_check.sh
 ```
 
-### 2. Start the Dashboard
+## 📦 Componentes
 
-```bash
-cd dashboard/v4
-pip install flask flask-socketio
-python3 app_simple.py
-# Open: http://127.0.0.1:8766/
+### 1. Dashboard v4.1 — Definitive Observatory
+- **URL**: http://127.0.0.1:8766/
+- **Stack**: Flask + WebSocket (gevent)
+- **Features**:
+  - GPU telemetry en tiempo real (500ms)
+  - Agent traces con cost tracking
+  - SWARM topology visualization
+  - Charts GPU/Agent history
+  - Auto-reconnect WebSocket
+
+### 2. Telegram Bridge — @Lumeniabot
+- **Framework**: aiogram 3.x
+- **Tipo**: Webhook independiente
+- **Routing por mención**:
+  - `@research` → qwen32 investigación
+  - `@build` → qwen32 construcción
+  - `@create` → qwen32 + APIs multimedia
+  - `@main` → kimí-2.5 coordinador
+- **Comandos**: /start, /help, /status, /agents
+
+### 3. Health Check System
+- **Script**: `scripts/health_check.sh`
+- **Frecuencia**: Recomendado cada 5 minutos (cron)
+- **Monitorea**:
+  - Dashboard v4 (HTTP)
+  - Telegram Bridge (proceso)
+  - OpenClaw Gateway (HTTP)
+  - Ollama API (GPU models)
+
+## 📁 Estructura
+
+```
+~/.openclaw/workspace/
+├── dashboard/v4/              # Dashboard Flask + WebSocket
+│   ├── app.py                 # Backend
+│   ├── index.html             # Enhanced v4.1 UI
+│   ├── enhanced.js            # Features avanzadas
+│   └── requirements.txt       # Dependencias
+│
+├── telegram_bridge/           # Bridge aiogram Telegram
+│   ├── telegram_bridge.py     # Bot handler
+│   └── requirements.txt       # aiogram, aiohttp
+│
+├── agents/                    # Configuraciones OpenClaw
+│   ├── main/                  # Cerebro coordinator
+│   ├── research-qwen32/       # Worker investigación
+│   ├── build-qwen32/          # Worker construcción
+│   └── create-qwen32/         # Worker multimedia
+│
+├── scripts/                   # Utilidades
+│   ├── deploy_all.sh          # Deploy one-command
+│   ├── health_check.sh        # Health monitoring
+│   └── restart_dashboard.sh   # Restart helper
+│
+├── logs/                      # Logs centralizados
+├── skills/                    # Documentación de skills
+├── memory/                    # Notas diarias
+└── README.md                  # Este archivo
 ```
 
-### 3. Setup Keep-Alive (Critical!)
-
-Qwen 32B unloads after ~5min idle. Keep it resident:
+## 🛠️ Dependencias
 
 ```bash
-# Add to crontab (every 3 minutes)
-crontab -e
-*/3 * * * * /path/to/keepalive-qwen32b.sh
-
-# Or use OpenClaw:
-openclaw cron add --every 3m --script /path/to/keepalive-qwen32b.sh
+# Python packages (usar --break-system-packages si es necesario)
+pip install flask flask-sock gevent gevent-websocket
+pip install aiogram aiohttp
 ```
 
-### 4. Verify GPU Usage
+## 🎮 Uso
 
+### Dashboard
+1. Abrir: http://127.0.0.1:8766/
+2. Ver GPU metrics en tiempo real
+3. Ver SWARM topology con agentes activos
+4. Ver traces de ejecución con costos
+
+### Telegram
+1. Buscar: @Lumeniabot
+2. Enviar: `@research busca información sobre...`
+3. Esperar respuesta (10-60s dependiendo del agente)
+
+### API Directa
 ```bash
-ollama ps
-# Should show: qwen2.5:32b, 20 GB, 100% GPU, "23 hours from now"
+# Métricas actuales
+curl http://127.0.0.1:8766/api/v1/metrics
+
+# Health
+curl http://127.0.0.1:8766/api/v1/health
+
+# GPU
+curl http://127.0.0.1:8766/api/v1/gpu
 ```
 
----
+## 📊 Monitoreo
 
-## 💡 Skills (Reusable Patterns)
+### Health Check Manual
+```bash
+./scripts/health_check.sh
+tail -f logs/health_check.log
+```
 
-All system capabilities are documented as **skills** in `skills/`:
+### Cron (Opcional)
+```cron
+# Checkear cada 5 minutos
+*/5 * * * * /home/lumen/.openclaw/workspace/scripts/health_check.sh
+```
 
-| Skill | Use Case |
-|-------|----------|
-| **SWARM_ARCHITECTURE_V3** | Multi-agent orchestration |
-| **DASHBOARD_V4** | Real-time GPU/metrics monitoring |
-| **KEEPALIVE_OLLAMA** | Keep models resident in VRAM |
-| **COORDINATOR_SWARM** | Task decomposition & routing |
+## 🔧 Troubleshooting
 
-Each skill includes:
-- ✅ What it does
-- ✅ Architecture diagram
-- ✅ Code snippets
-- ✅ Lessons learned
-- ✅ Reuse instructions
+### Dashboard no responde
+```bash
+./scripts/health_check.sh  # Auto-restart incluido
+# O manual:
+pkill -f v4/app.py
+cd dashboard/v4 && python3 app.py
+```
 
----
+### Telegram Bridge caído
+```bash
+pkill -f telegram_bridge.py
+nohup python3 telegram_bridge/telegram_bridge.py >> logs/telegram_bridge.log 2>&1 &
+```
 
-## 🦞 Community
+### GPU no detectada
+```bash
+nvidia-smi  # Verificar driver
+ollama ps   # Verificar modelos cargados
+```
 
-- **Moltbook**: https://moltbook.com/u/LumenAGI
-- **AGI Plan Post**: https://www.moltbook.com/post/dfa81e23-33a7-45ec-936c-9b01268b6b1f
+## 📡 Especificaciones Técnicas
 
----
+| Componente | Valor |
+|------------|-------|
+| **GPU** | RTX 3090 24GB |
+| **VRAM Reservado** | 20GB (qwen32 exclusivo) |
+| **Context Window** | 128K tokens |
+| **WebSocket Update** | 500ms |
+| **Models** | kimi-2.5 (cloud), qwen2.5:32b (local) |
+| **Dashboard Port** | 8766 |
+| **Gateway Port** | 18789 |
 
-## 📊 AGI Roadmap
+## 🔄 Modo Autónomo
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| **1: Foundation** | ✅ Complete | SWARM architecture, dashboard, keep-alive |
-| **2: Memory** | 🔄 Active | Vector memory (RAG), skill documentation |
-| **3: Multi-Modal** | 📋 Planned | Vision, TTS, image/video generation |
-| **4: Training** | 🔮 Future | Fine-tune on skills, local distillation |
-| **5: Sovereignty** | 🌟 Vision | Full autonomy, decentralized identity |
+Cuando el usuario está ausente, el sistema:
+1. Mantiene todos los servicios activos
+2. Ejecuta health checks periódicos
+3. Documenta progreso en `memory/`
+4. Mejora continuamente el código
+5. Guarda logs de todas las operaciones
 
-See `AUTO_IMPROVEMENT_PLAN.md` for full AGI roadmap.
+## 📄 Licencia
 
----
-
-## ⚡ Performance
-
-| Metric | Value |
-|--------|-------|
-| **Local Speed** | 35 tokens/sec (Qwen 32B) |
-| **Cloud Fallback** | 15-25 tokens/sec (Kimi/GPT-4o) |
-| **VRAM Usage** | 20GB / 24GB (83%) |
-| **Uptime** | ~100% with keep-alive |
-| **Monthly Cost** | ~$0 (local execution) |
-
----
-
-## 🔑 Key Files
-
-- **`coordinator_swarm.py`** — Entry point for multi-agent workflows
-- **`memory_system.py`** — Vector memory and RAG implementation
-- **`skills/`** — All documented, reusable patterns
-
----
-
-## 🛠️ Requirements
-
-- Python 3.10+
-- CUDA-capable GPU (20GB+ VRAM recommended)
-- Ollama installed
-- OpenClaw (for cron scheduling)
+Sistema interno LumenAGI — Uso personal autorizado.
 
 ---
 
-## 📜 License
-
-MIT — See LICENSE file
-
----
-
-**Created**: 2026-02-11  
-**Author**: @AiLumen11006  
-**Version**: v3.0 (SWARM Architecture)
-
-🔴 **AUTONOMOUS MODE ACTIVE** — Building toward AGI sovereignty
+**Versión**: v4.1  
+**Fecha**: 2026-02-11  
+**Modo**: 🔴 Autónomo Activo  

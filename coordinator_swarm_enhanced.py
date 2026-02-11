@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 LumenAGI SWARM Coordinator v1.1 — Enhanced with Tool Plugin
-Arquitectura: Kimi Cerebro (Cloud) + Qwen Agente (Local 20GB VRAM) + Auto-Tool Selection
+Arquitectura: Kimi Cerebro (Cloud) + Qwen Agente (Local) + Tool Plugin
 
-Plugin integration: Detecta automáticamente qué tools usar por tarea
+Integración gradual: mantiene el core v1.0, agrega tool selection como plugin
 """
 
 import json
@@ -13,21 +13,22 @@ from typing import Dict, List, Any, Literal
 from dataclasses import dataclass
 from enum import Enum
 
-# Tool plugin integration
 sys.path.insert(0, '/home/lumen/.openclaw/workspace')
-from coordinator_tool_plugin import CoordinatorToolPlugin
+from coordinator_tool_plugin import CoordinatorToolPlugin, enhance_swarm_coordinator
+
 
 class AgentType(Enum):
     """Tipos de agentes disponibles en el SWARM"""
-    COORDINATOR = "coordinator"      # Kimi K2.5 - decisiones, orquestación
-    CODE_LOCAL = "code_local"        # Qwen 32B - código simple, parsing
-    RESEARCH = "research"            # Claude Sonnet - investigación profunda
-    CODE_REVIEW = "code_review"      # Claude Sonnet - revisión/debug
-    VISION = "vision"                # APIs - imágenes/video
+    COORDINATOR = "coordinator"
+    CODE_LOCAL = "code_local"
+    RESEARCH = "research"
+    CODE_REVIEW = "code_review"
+    VISION = "vision"
+
 
 @dataclass
 class SubTask:
-    """Una subtarea del plan con tool support"""
+    """Una subtarea del plan"""
     id: str
     agent_type: AgentType
     description: str
@@ -44,14 +45,11 @@ class SubTask:
         if self.required_tools is None:
             self.required_tools = []
 
+
 class SWARMCoordinator:
     """
-    El Coordinator principal v1.1 (Kimi K2.5 cerebro + Tool Plugin)
-    
-    Decision Tree + Auto-Tool Selection:
-    - Detecta automáticamente tools necesarias por tarea
-    - Enriquece prompts con instrucciones de herramientas
-    - Estima costos antes de ejecución
+    El Coordinator principal v1.1 con Tool Plugin integrado
+    Compatible hacia atrás con v1.0
     """
     
     AGENT_MODELS = {
@@ -69,10 +67,24 @@ class SWARMCoordinator:
         
     def analyze_request(self, user_request: str) -> Dict[str, Any]:
         """
-        Fase 1: Análisis por Kimi + Tool Plugin enhancement
-        Decide qué agentes y tools necesita la tarea
+        Fase 1: Análisis (ahora con plugin enhancement)
         """
-        # Keywords para routing (original)
+        # Análisis original del coordinator
+        original = self._original_analysis(user_request)
+        
+        # Si plugin está activo, enriquecer
+        if self.use_enhanced and self.tool_plugin:
+            enhanced = self.tool_plugin.enhance_task_analysis(user_request, original)
+            enhanced['execution_plan'] = self.tool_plugin.suggest_execution_plan(user_request, enhanced)
+            enhanced['tool_instructions'] = self.tool_plugin.get_tool_instructions(
+                enhanced['tool_selection']['recommended_tools']
+            )
+            return enhanced
+        
+        return original
+    
+    def _original_analysis(self, user_request: str) -> Dict:
+        """Análisis original del coordinator (sin plugin)"""
         if any(kw in user_request.lower() for kw in 
                 ["research", "investiga", "busca", "encuentra", "best practices"]):
             needs_research = True
@@ -91,50 +103,29 @@ class SWARMCoordinator:
         else:
             needs_review = False
 
-        original_analysis = {
+        return {
             "needs_research": needs_research,
             "needs_code": needs_code,
             "needs_review": needs_review,
-            "original_request": user_request,
-            "recommended_agent": "research" if needs_research else ("code_local" if needs_code else "main")
+            "recommended_agent": "research" if needs_research else ("code_local" if needs_code else "main"),
+            "original_request": user_request
         }
-        
-        # Tool plugin enhancement
-        if self.use_enhanced and self.tool_plugin:
-            enhanced = self.tool_plugin.enhance_task_analysis(user_request, original_analysis)
-            enhanced['tool_execution_plan'] = self.tool_plugin.suggest_execution_plan(user_request, enhanced)
-            enhanced['tool_instructions'] = self.tool_plugin.get_tool_instructions(
-                enhanced['tool_selection']['recommended_tools']
-            )
-            return enhanced
-        
-        return original_analysis
     
     def create_plan(self, analysis: Dict[str, Any]) -> List[SubTask]:
         """
-        Fase 2: Creación del plan de ejecución con tool support
+        Fase 2: Creación del plan de ejecución (con tools si está disponible)
         """
         tasks = []
         task_id = 0
         
-        # Extraer tool info del enhanced analysis
+        # Extraer información de tools si existe
         tool_selection = analysis.get('tool_selection', {})
         recommended_tools = tool_selection.get('recommended_tools', [])
         tool_instructions = analysis.get('tool_instructions', '')
         
-        # Agente recomendado (del plugin o default)
+        # Agente enhanced (puede venir del plugin)
         agent_rec = analysis.get('enhanced_agent_recommendation', {})
-        chosen_agent = agent_rec.get('agent', analysis.get('recommended_agent', 'main'))
-        
-        # Mapear chosen_agent a AgentType
-        agent_type_map = {
-            'research': AgentType.RESEARCH,
-            'code_local': AgentType.CODE_LOCAL,
-            'build-qwen32': AgentType.CODE_LOCAL,
-            'create-qwen32': AgentType.CODE_LOCAL,
-            'main': AgentType.COORDINATOR,
-            'coordinator': AgentType.COORDINATOR,
-        }
+        chosen_agent = agent_rec.get('agent', 'main')
         
         # Si necesita investigación -> primero Research
         if analysis.get("needs_research"):
@@ -143,49 +134,54 @@ class SWARMCoordinator:
                 id=f"T{task_id}",
                 agent_type=AgentType.RESEARCH,
                 description=f"Investigar: {analysis.get('original_request', '')}",
-                input_data={"query": analysis.get('original_request', ''), "tool_instructions": tool_instructions},
-                output_format="Resumen estructurado con fuentes y best practices",
+                input_data={"query": analysis.get('original_request', '')},
+                output_format="Resumen estructurado con fuentes",
                 max_tokens=2000,
                 required_tools=['web_search'] if 'web_search' in recommended_tools else [],
                 tool_instructions=tool_instructions if 'web_search' in recommended_tools else ""
             ))
         
-        # Tarea principal con el agente elegido
+        # Tarea principal con tools
         task_id += 1
         task_deps = [tasks[-1].id] if tasks else []
         
+        # Mapear chosen_agent a AgentType
+        agent_type_map = {
+            'research': AgentType.RESEARCH,
+            'code_local': AgentType.CODE_LOCAL,
+            'build-qwen32': AgentType.CODE_LOCAL,
+            'create-qwen32': AgentType.CODE_LOCAL,
+            'main': AgentType.COORDINATOR,
+        }
         agent_type = agent_type_map.get(chosen_agent, AgentType.COORDINATOR)
         
         tasks.append(SubTask(
             id=f"T{task_id}",
             agent_type=agent_type,
-            description="Ejecutar tarea principal con herramientas disponibles",
+            description="Ejecutar tarea con herramientas disponibles",
             input_data={
                 "request": analysis.get('original_request', ''),
                 "tool_instructions": tool_instructions,
                 "available_tools": recommended_tools
             },
-            output_format="Resultado de la ejecución",
+            output_format="Resultado de la ejecución con herramientas",
             max_tokens=2000,
             depends_on=task_deps,
             required_tools=recommended_tools,
             tool_instructions=tool_instructions
         ))
         
-        # Si necesita revisión -> al final Code Review
+        # Si necesita revisión
         if analysis.get("needs_review"):
             task_id += 1
             task_deps = [tasks[-1].id]
             tasks.append(SubTask(
                 id=f"T{task_id}",
                 agent_type=AgentType.CODE_REVIEW,
-                description="Revisar y optimizar resultado",
-                input_data={
-                    "code": "{{output_previo}}",
-                    "criteria": "Type hints, docstrings, error handling, seguridad"
-                },
-                output_format="Código/resultado revisado",
-                max_tokens=2000,
+                description="Revisar resultado",
+                input_data={"code": "{{output_previo}}"},
+                output_format="Código revisado",
+                max_tokens=1500,
                 depends_on=task_deps
             ))
         
@@ -193,77 +189,46 @@ class SWARMCoordinator:
     
     def execute_task(self, task: SubTask) -> str:
         """
-        Fase 3: Ejecutar subtarea en el agente asignado
+        Fase 3: Ejecutar subtarea con contexto de tools
         """
         model = self.AGENT_MODELS[task.agent_type]
         
-        # Construir prompt según el agente
-        prompt = self._build_agent_prompt(task)
+        # Construir prompt enriquecido con tools
+        prompt = self._build_enriched_prompt(task)
         
         # Ejecutar según el modelo
         if model == "vision_api":
             return self._call_vision_api(task)
         elif "ollama/" in model:
             return self._call_ollama(model, prompt, task.max_tokens)
-        elif "anthropic/" in model:
-            return self._call_claude(prompt, task.max_tokens)
+        elif "anthropic/" in model or "openai/" in model:
+            return f"[{model}] {task.description[:50]}... (simulado)"
         else:
             return f"Error: Modelo no soportado: {model}"
     
-    def _build_agent_prompt(self, task: SubTask) -> str:
-        """Construir prompt específico para cada tipo de agente"""
-        prompts = {
-            AgentType.CODE_LOCAL: f"""
-Actúa como un generador de código Python eficiente.
+    def _build_enriched_prompt(self, task: SubTask) -> str:
+        """Construir prompt con tool instructions"""
+        
+        base_prompt = f"""Eres un agente del sistema SWARM LumenAGI.
 
 TAREA: {task.description}
-
-REQUISITOS:
-- Type hints obligatorios
-- Docstrings completas
-- Funciones pequeñas y claras
-- Manejo básico de errores con try/except
-- Solo devuelve el código, sin explicaciones
-
-FORMATO SALIDA:
-{task.output_format}
-""",
-            AgentType.RESEARCH: f"""
-Eres un investigador experto en arquitectura de software y mejores prácticas.
-
-CONSULTA: {task.description}
-
-Realiza una búsqueda exhaustiva y proporciona:
-1. Resumen de findings principales
-2. Fuentes relevantes (papers, docs, repos)
-3. Best practices específicas aplicables
-4. Recomendaciones de implementación
-
-FORMATO: JSON estructurado con campos: summary, sources, best_practices, recommendations
-""",
-            AgentType.CODE_REVIEW: f"""
-Eres un reviewer senior de código Python.
-
-CÓDIGO A REVISAR: {task.description}
-
-CRITERIOS DE REVISIÓN:
-1. Type hints presentes y correctos
-2. Docstrings descriptivas
-3. Manejo de errores robusto
-4. Eficiencia y optimización
-5. Seguridad básica
-
-SALIDA:
-- Código revisado y mejorado
-- Lista de cambios realizados
-- Ejemplo de uso si aplica
 """
-        }
-        return prompts.get(task.agent_type, task.description)
+        
+        # Agregar instrucciones de tools si existen
+        if task.tool_instructions:
+            base_prompt += f"\n{task.tool_instructions}\n"
+        
+        if task.required_tools:
+            base_prompt += f"\n⚡ ESTA TAREA REQUIERE: {', '.join(task.required_tools)}\n"
+        
+        base_prompt += f"\nINPUT DATA: {json.dumps(task.input_data, indent=2)}\n"
+        base_prompt += f"\nOUTPUT ESPERADO:\n{task.output_format}\n"
+        
+        return base_prompt
     
     def _call_ollama(self, model: str, prompt: str, max_tokens: int) -> str:
-        """Llamar a modelo local (Qwen 32B o Kimi)"""
-        model_name = model.split("/")[-1]  # Extrae "qwen2.5:32b"
+        """Llamar a Ollama local"""
+        model_name = model.split("/")[-1]
         
         data = {
             "model": model_name,
@@ -289,17 +254,12 @@ SALIDA:
         except Exception as e:
             return f"Error calling Ollama: {str(e)}"
     
-    def _call_claude(self, prompt: str, max_tokens: int) -> str:
-        """Placeholder - requiere integración con Anthropic API"""
-        return f"[Claude API call needed] Task: {prompt[:100]}..."
-    
     def _call_vision_api(self, task: SubTask) -> str:
-        """Placeholder para APIs de visión"""
         return "[Vision API call needed]"
     
     def run(self, user_request: str) -> Dict[str, Any]:
         """
-        Punto de entrada principal v1.1 con tool plugin
+        Punto de entrada principal — con o sin plugin
         """
         mode = "ENHANCED + TOOLS" if self.use_enhanced else "VANILLA"
         print(f"🧠 Coordinator [{mode}] recibió: {user_request[:80]}...")
@@ -313,15 +273,13 @@ SALIDA:
             ts = analysis['tool_selection']
             print(f"🔧 Tools detectadas: {ts.get('recommended_tools', [])}")
             print(f"💰 Costo estimado: {ts.get('estimated_cost', 'Variable')}")
-            if analysis.get('enhanced_agent_recommendation', {}).get('override'):
-                print(f"⚡ Override: {analysis['enhanced_agent_recommendation']['original']} → {analysis['enhanced_agent_recommendation']['agent']}")
         
         # Fase 2: Plan
         plan = self.create_plan(analysis)
         print(f"📋 Plan creado: {len(plan)} tareas")
         for task in plan:
-            tool_info = f" [tools: {task.required_tools}]" if task.required_tools else ""
-            print(f"   - T{task.id}: {task.agent_type.value}{tool_info} ({task.description[:40]}...)")
+            tool_info = f" ([tools: {task.required_tools}])" if task.required_tools else ""
+            print(f"   - T{task.id}: {task.agent_type.value}{tool_info}")
         
         # Fase 3: Ejecución
         results = {}
@@ -344,29 +302,53 @@ SALIDA:
         }
     
     def _integrate_results(self, results: Dict[str, str], analysis: Dict[str, Any]) -> str:
-        """Integrar resultados de todos los agentes"""
-        parts = ["🎯 Resultado del Sistema Multi-Agente SWARM:\n"]
+        """Integrar resultados"""
+        parts = ["🎯 Resultado Multi-Agente SWARM:\n"]
         
         for task_id, result in results.items():
-            parts.append(f"\n--- Agent {task_id} ---\n{result[:500]}...")
+            parts.append(f"\n--- {task_id} ---\n{result[:500]}...")
         
         return "\n".join(parts)
 
 
-# Demo/Testing
+# === DEMO ===
+
+def demo_comparison():
+    """Compara vanilla vs enhanced"""
+    
+    test_cases = [
+        "Investiga las últimas noticias sobre OpenAI",
+        "Crea un script para hacer backup automático",
+        "Lee config.json y genera documentación",
+        "Genera una imagen de un robot programando",
+    ]
+    
+    print("="*70)
+    print("🔦 COMPARACIÓN: Vanilla vs Enhanced with Tool Plugin")
+    print("="*70)
+    
+    for test in test_cases:
+        print(f"\n{'='*70}")
+        print(f"📥 TAREA: {test}")
+        print(f"{'='*70}\n")
+        
+        # Vanilla
+        print("[VANILLA v1.0]")
+        vanilla = SWARMCoordinator(tool_plugin_enabled=False)
+        result_v = vanilla.analyze_request(test)
+        print(f"   Agente: {result_v['recommended_agent']}")
+        print(f"   Tools: N/A (sin plugin)")
+        
+        # Enhanced
+        print("\n[ENHANCED v1.1 + Plugin]")
+        enhanced = SWARMCoordinator(tool_plugin_enabled=True)
+        result_e = enhanced.analyze_request(test)
+        print(f"   Agente: {result_e['enhanced_agent_recommendation']['agent']}")
+        print(f"   Tools: {result_e['tool_selection']['recommended_tools']}")
+        print(f"   Costo: {result_e['tool_selection']['estimated_cost']}")
+        if result_e['enhanced_agent_recommendation']['override']:
+            print(f"   ⚡ Override aplicado")
+
+
 if __name__ == "__main__":
-    coordinator = SWARMCoordinator()
-    
-    # Test 1: Solo código
-    print("="*60)
-    print("TEST 1: Generar función simple")
-    print("="*60)
-    result = coordinator.run("Crea una función Python que calcule el factorial")
-    print(f"\n{result['final_response']}")
-    
-    # Test 2: Investigación + código
-    print("\n" + "="*60)
-    print("TEST 2: Research + Code")
-    print("="*60)
-    result = coordinator.run("Investiga best practices de FastAPI y genera estructura de proyecto")
-    print(f"\n{result['final_response']}")
+    demo_comparison()
