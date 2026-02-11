@@ -2,7 +2,9 @@
 
 **Inicio del Proyecto**: 2026-02-11  
 **Versión Actual**: SWARM v3.0  
-**Última Actualización**: 2026-02-11 15:50 EST
+**Última Actualización**: 2026-02-11 15:53 EST
+
+**GitHub**: https://github.com/lumenai17-ui/lumenagi-v3.0 ✅
 
 ---
 
