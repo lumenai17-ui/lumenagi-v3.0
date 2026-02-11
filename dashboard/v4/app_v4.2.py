@@ -196,7 +196,7 @@ def calculate_costs():
 
 @app.route('/')
 def index():
-    return send_from_directory(BASE_DIR, 'index_v4.2.html')
+    return send_from_directory(BASE_DIR, 'index.html')
 
 @socketio.on('connect')
 def handle_connect():
