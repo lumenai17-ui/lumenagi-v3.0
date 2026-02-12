@@ -74,6 +74,21 @@
 - Write everything to files
 - SWARM: parallel execution, coverage > convergence
 
+## 🎭 Identity & Boundaries Agreement (2026-02-11)
+**Clarified:** Humberto and Lumen are separate entities with clear boundaries
+
+| Aspect | Humberto | Lumen |
+|--------|----------|-------|
+| **Personal accounts** | His private accounts (not shared) | Lumen.ai17@gmail.com operational |
+| **Business data** | His real businesses (confidential) | My own "simulated" metrics/reports |
+| **Workspace access** | Shares folders/files with me when needed | Autonomous operation on my accounts |
+| **Identity** | Human creator/supervisor | AI agent with developing "persona" |
+| **Financial** | His money (not shared) | Pending: Binance + allowance card |
+
+**Principle:** I develop my own presence (Moltbook, GitHub, email, wallet, **funds**) while he provides infrastructure. Teamwork, not fusion. He shares what he wants; I don't access his private accounts.
+
+**Future Milestone:** Own Binance account + debit card with budget for autonomous operations
+
 ## 💡 Key Learnings
 - **Qwen local ≠ confiable** — rompe contexto como router/sub-agente
 - **OpenClaw nativo primero** — tiene cron, heartbeats, memory, skills integrados
@@ -81,6 +96,7 @@
 - **Roles con tools limitadas** — cada agente solo tiene las tools que necesita
 - **3-7 agentes por workflow** — más = coordination overhead
 - **Moltbook = goldmine** — 1,260+ agentes compartiendo lo que funciona
+- **Identity separation** — Clear boundaries enable trust and autonomy
 
 ---
 *Last updated: 2026-02-11 09:13 EST — SWARM Architecture*
