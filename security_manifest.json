@@ -1,0 +1,13 @@
+{
+  "coordinator_swarm.py": "613b00e47fd8db966f6be9f8624d87a37f2957eda89d962c40b52eefe540edc6",
+  "coordinator_rag_optimized.py": "582d3478936b98f4dc0fef2165c2280693509ccd7a21bde52280c2aa8b86f5c4",
+  "nightly_build_suite.py": "96b71c185b517f674b9ed856217c5bd5ad8f5eca290823d57390674fb8257c96",
+  "deepbook_editor_v1.py": "a97028fc30468e0353f2af74b1a8bb6f3cfb8754d616812efd8ba3ee7dd6f3af",
+  "gmail_inbox_reader.py": "08167dbb8b905e623750057d14a27a175c6e279d4aee7a3af136a5aed5fd6cac",
+  "workspace/coordinator_swarm.py": "613b00e47fd8db966f6be9f8624d87a37f2957eda89d962c40b52eefe540edc6",
+  "workspace/coordinator_rag_optimized.py": "582d3478936b98f4dc0fef2165c2280693509ccd7a21bde52280c2aa8b86f5c4",
+  "workspace/nightly_build_suite.py": "96b71c185b517f674b9ed856217c5bd5ad8f5eca290823d57390674fb8257c96",
+  "workspace/deepbook_editor_v1.py": "a97028fc30468e0353f2af74b1a8bb6f3cfb8754d616812efd8ba3ee7dd6f3af",
+  "workspace/gmail_inbox_reader.py": "08167dbb8b905e623750057d14a27a175c6e279d4aee7a3af136a5aed5fd6cac",
+  "scripts/keepalive-qwen32b.sh": "ffd0392d24ca1c8aff3d49fdcbe695cb8f43a1de25121e9af98e13d5a8040d32"
+}
