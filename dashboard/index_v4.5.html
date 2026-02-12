@@ -566,7 +566,7 @@
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
-        const socket = io();
+        const socket = io('http://127.0.0.1:8766');
         let gpuChart, agentChart;
         
         function fmtNum(n) {
@@ -751,6 +751,68 @@
                 agentChart.data.datasets[0].data = data.agent_activity.qwen;
                 agentChart.data.datasets[1].data = data.agent_activity.kimi;
                 agentChart.update('none');
+            }
+            
+            // Notion Tasks
+            if (data.notion) {
+                const notion = data.notion;
+                const hTasks = document.getElementById('humberto-tasks');
+                
+                if (!notion.success) {
+                    hTasks.innerHTML = `<div class="task-item" style="color: #888; font-style: italic; text-align: center;">
+                        <span>⚠️</span>
+                        <span>${notion.error || 'Notion no conectado'}</span>
+                    </div>`;
+                } else {
+                    let html = '';
+                    
+                    // In Progress
+                    if (notion.tasks?.in_progress?.length > 0) {
+                        notion.tasks.in_progress.slice(0, 5).forEach(t => {
+                            html += `<div class="task-item active">
+                                <span class="task-status status-active">●</span>
+                                <span title="${t.title}">${t.title.substring(0, 25)}${t.title.length > 25 ? '...' : ''}</span>
+                                ${t.priority === 'High' ? '<span style="color:#ff4444;margin-left:auto;font-size:0.6rem;">●</span>' : ''}
+                            </div>`;
+                        });
+                    }
+                    
+                    // Not Started
+                    if (notion.tasks?.not_started?.length > 0) {
+                        notion.tasks.not_started.slice(0, 3).forEach(t => {
+                            html += `<div class="task-item pending">
+                                <span class="task-status status-pending">○</span>
+                                <span title="${t.title}">${t.title.substring(0, 25)}${t.title.length > 25 ? '...' : ''}</span>
+                            </div>`;
+                        });
+                    }
+                    
+                    // Done (últimas)
+                    if (notion.tasks?.done?.length > 0) {
+                        notion.tasks.done.slice(0, 2).forEach(t => {
+                            html += `<div class="task-item done">
+                                <span class="task-status status-done">✓</span>
+                                <span title="${t.title}" style="text-decoration: line-through; opacity: 0.7;">${t.title.substring(0, 22)}${t.title.length > 22 ? '...' : ''}</span>
+                            </div>`;
+                        });
+                    }
+                    
+                    if (html === '') {
+                        html = `<div class="task-item" style="color: #888; text-align: center;">
+                            <span>📭</span>
+                            <span>Sin tareas</span>
+                        </div>`;
+                    }
+                    
+                    hTasks.innerHTML = html;
+                    
+                    // Actualizar badge del header
+                    const totalTasks = (notion.count?.not_started || 0) + (notion.count?.in_progress || 0);
+                    const headerBadge = document.querySelector('.status-pill');
+                    if (totalTasks > 0 && headerBadge) {
+                        headerBadge.innerHTML = `SWARM Active • ${totalTasks} pending`;
+                    }
+                }
             }
             
             // Traces

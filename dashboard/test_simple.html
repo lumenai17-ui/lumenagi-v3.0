@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+        .log { margin: 5px 0; }
+        .error { color: #f44; }
+        .success { color: #0f0; }
+        .data { color: #ff0; }
+    </style>
+</head>
+<body>
+    <h2>WebSocket Test - LumenAGI Dashboard</h2>
+    <div id="logs"></div>
+
+<script>
+const logs = document.getElementById('logs');
+function log(msg, cls='') {
+    const div = document.createElement('div');
+    div.className = 'log ' + cls;
+    div.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+    logs.appendChild(div);
+}
+
+log('Connecting to ws://127.0.0.1:8766/ws...', 'success');
+
+const ws = new WebSocket('ws://127.0.0.1:8766/ws');
+
+ws.onopen = () => {
+    log('✅ CONNECTED!', 'success');
+};
+
+ws.onmessage = (e) => {
+    try {
+        const data = JSON.parse(e.data);
+        log('📨 Data received. GPU: ' + (data.gpu ? data.gpu.utilization + '%' : 'null') + 
+            ' | Ollama: ' + (data.ollama_models ? data.ollama_models.length : 0) + ' models', 'data');
+    } catch(err) {
+        log('❌ Parse error: ' + err.message, 'error');
+    }
+};
+
+ws.onerror = (e) => {
+    log('❌ WebSocket ERROR', 'error');
+    console.error(e);
+};
+
+ws.onclose = (e) => {
+    log('❌ CLOSED. Code: ' + e.code + ' Reason: ' + e.reason, 'error');
+};
+
+// Auto-reconnect
+setInterval(() => {
+    if (ws.readyState === WebSocket.CLOSED) {
+        log('🔄 Attempting reconnect...', 'success');
+        location.reload();
+    }
+}, 5000);
+</script>
+</body>
+</html>

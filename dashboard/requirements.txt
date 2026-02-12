@@ -1,0 +1,5 @@
+flask>=3.0.0
+flask-sock>=0.7.0
+gevent>=23.9.0
+gunicorn>=21.2.0
+python-socketio>=5.9.0

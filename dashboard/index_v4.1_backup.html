@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumenAGI v4.1 | Enhanced Observatory</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-elevated: #252542;
+            --accent-primary: #ff6b35;
+            --accent-secondary: #00ff88;
+            --accent-tertiary: #3b82f6;
+            --accent-warning: #ffaa00;
+            --accent-danger: #ff4444;
+            --text-primary: #e0e0e0;
+            --text-secondary: #888;
+            --border: #2a2a3a;
+            --kimi: #3b82f6;
+            --qwen: #00ff88;
+            --api: #ff6b35;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; line-height: 1.5; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; border-bottom: 1px solid var(--border); background: var(--bg-secondary); position: sticky; top: 0; z-index: 100; }
+        .logo { display: flex; align-items: center; gap: 1rem; }
+        .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .logo-text { font-size: 1.5rem; font-weight: 700; }
+        .logo-text span { color: var(--accent-primary); }
+        .status-pill { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(0, 255, 136, 0.1); border: 1px solid var(--accent-secondary); border-radius: 20px; font-size: 0.85rem; }
+        .status-pill::before { content: ''; width: 8px; height: 8px; background: var(--accent-secondary); border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .connection-status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-secondary); }
+        .connection-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-secondary); transition: all 0.3s; }
+        .connection-dot.disconnected { background: var(--accent-danger); animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .main-grid { display: grid; grid-template-columns: 300px 1fr 300px; gap: 1rem; padding: 1rem; max-width: 1800px; margin: 0 auto; }
+
+        /* GPU Panel */
+        .gpu-section { display: flex; flex-direction: column; gap: 1rem; }
+        .card { background: var(--bg-card); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--border); transition: border-color 0.2s; }
+        .card:hover { border-color: var(--accent-secondary); }
+        .card h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-secondary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .metric { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+        .metric:last-child { border-bottom: none; }
+        .metric-label { font-size: 0.8rem; color: var(--text-secondary); }
+        .metric-value { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+        .metric-value.success { color: var(--accent-secondary); }
+        .metric-value.warning { color: var(--accent-warning); }
+        .metric-value.danger { color: var(--accent-danger); }
+        .chart-container { height: 120px; margin-top: 1rem; }
+
+        /* Observatory */
+        .observatory-section { display: flex; flex-direction: column; gap: 1rem; }
+        .swarm-viz { background: var(--bg-card); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border); }
+        .swarm-viz h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-secondary); margin-bottom: 1.5rem; }
+        .flow-tier { display: flex; justify-content: center; align-items: center; gap: 2rem; margin: 1rem 0; }
+        .agent-node { display: flex; flex-direction: column; align-items: center; padding: 1rem 1.25rem; background: var(--bg-secondary); border-radius: 12px; border: 2px solid var(--border); min-width: 100px; transition: all 0.3s; cursor: pointer; position: relative; }
+        .agent-node:hover { transform: translateY(-2px); }
+        .agent-node.active { border-color: var(--accent-secondary); box-shadow: 0 0 25px rgba(0, 255, 136, 0.3); animation: glow 2s ease-in-out infinite alternate; }
+        @keyframes glow { from { box-shadow: 0 0 15px rgba(0, 255, 136, 0.2); } to { box-shadow: 0 0 30px rgba(0, 255, 136, 0.5); } }
+        .agent-node.coordinator { border-color: var(--kimi); background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), var(--bg-secondary)); }
+        .agent-node.worker { border-color: var(--qwen); background: linear-gradient(135deg, rgba(0, 255, 136, 0.05), var(--bg-secondary)); }
+        .agent-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 0.5rem; }
+        .agent-avatar.kimi { background: rgba(59, 130, 246, 0.2); }
+        .agent-avatar.qwen { background: rgba(0, 255, 136, 0.2); }
+        .agent-name { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
+        .agent-model { font-size: 0.65rem; color: var(--text-secondary); }
+        .agent-status { position: absolute; top: -6px; right: -6px; width: 14px; height: 14px; background: var(--accent-secondary); border-radius: 50%; border: 2px solid var(--bg-card); display: none; }
+        .agent-status.active { display: block; animation: pulse 1.5s infinite; }
+        .arrow-down { font-size: 1.25rem; color: var(--text-secondary); opacity: 0.5; }
+
+        .traces-panel { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; max-height: 350px; display: flex; flex-direction: column; }
+        .traces-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--bg-secondary); }
+        .traces-header h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-secondary); }
+        .live-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: var(--text-secondary); }
+        .live-indicator::before { content: ''; width: 6px; height: 6px; background: var(--accent-danger); border-radius: 50%; animation: blink 1s infinite; }
+        .traces-list { overflow-y: auto; flex: 1; }
+        .trace-row { display: grid; grid-template-columns: 2rem 1fr auto auto auto; gap: 0.75rem; align-items: center; padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--border); font-size: 0.8rem; transition: background 0.2s; }
+        .trace-row:hover { background: var(--bg-secondary); }
+        .trace-row:last-child { border-bottom: none; }
+        .trace-badge { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+        .trace-badge.main { background: rgba(59, 130, 246, 0.2); }
+        .trace-badge.worker { background: rgba(0, 255, 136, 0.2); }
+        .trace-task { color: var(--text-primary); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .trace-meta { font-family: 'SF Mono', monospace; font-size: 0.7rem; color: var(--text-secondary); }
+        .trace-tag { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.65rem; text-transform: uppercase; font-weight: 600; }
+        .trace-tag.running { background: rgba(255, 170, 0, 0.15); color: var(--accent-warning); }
+        .trace-tag.completed { background: rgba(0, 255, 136, 0.15); color: var(--accent-secondary); }
+        .trace-tag.error { background: rgba(255, 68, 68, 0.15); color: var(--accent-danger); }
+
+        /* Stats Panel */
+        .stats-section { display: flex; flex-direction: column; gap: 1rem; }
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+        .stat-box { background: var(--bg-card); border-radius: 10px; padding: 1rem; border: 1px solid var(--border); text-align: center; }
+        .stat-box h3 { font-size: 0.65rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 1px; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; }
+        .stat-delta { font-size: 0.7rem; margin-top: 0.25rem; }
+
+        .cost-breakdown { display: flex; flex-direction: column; gap: 0.5rem; }
+        .cost-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem; }
+        .cost-icon { font-size: 1rem; }
+        .cost-value { font-family: 'SF Mono', monospace; font-weight: 600; }
+
+        /* Badges */
+        .badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+        .badge.green { background: rgba(0, 255, 136, 0.15); color: var(--accent-secondary); }
+        .badge.blue { background: rgba(59, 130, 246, 0.15); color: var(--kimi); }
+        .badge.orange { background: rgba(255, 107, 53, 0.15); color: var(--accent-primary); }
+
+        /* Memory Bar */
+        .memory-container { margin-top: 0.75rem; }
+        .memory-header { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
+        .memory-bar { height: 8px; background: var(--bg-primary); border-radius: 4px; overflow: hidden; }
+        .memory-fill { height: 100%; background: linear-gradient(90deg, var(--accent-secondary), #00c853); border-radius: 4px; transition: width 0.3s ease, background 0.3s; }
+        .memory-fill.caution { background: linear-gradient(90deg, var(--accent-warning), #ff6d00); }
+        .memory-fill.critical { background: linear-gradient(90deg, var(--accent-danger), #cc0000); }
+
+        /* Process List */
+        .proc-list { display: flex; flex-direction: column; gap: 0.4rem; }
+        .proc-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.6rem; background: var(--bg-secondary); border-radius: 6px; font-size: 0.75rem; }
+        .proc-name { display: flex; align-items: center; gap: 0.5rem; }
+        .proc-pid { font-family: 'SF Mono', monospace; font-size: 0.6rem; background: var(--bg-card); padding: 0.1rem 0.35rem; border-radius: 3px; color: var(--text-secondary); }
+
+        /* Responsive */
+        @media (max-width: 1400px) { .main-grid { grid-template-columns: 280px 1fr 280px; } }
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } .swarm-viz .flow-tier { flex-direction: column; gap: 1rem; } .arrow-down { transform: rotate(90deg); } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">🔮</div>
+            <div class="logo-text">Lumen<span>AGI</span> v4.1</div>
+        </div>
+        <div class="status-pill">SWARM Active</div>
+        <div class="connection-status">
+            <div class="connection-dot" id="conn-dot"></div>
+            <span id="conn-text">Connecting...</span>
+        </div>
+    </header>
+
+    <div class="main-grid">
+        <!-- GPU Panel -->
+        <section class="gpu-section">
+            <div class="card">
+                <h2>🎮 GPU Telemetry</h2>
+                <div class="metric">
+                    <span class="metric-label">Device</span>
+                    <span class="metric-value" id="gpu-dev">RTX 3090</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Utilization</span>
+                    <span class="metric-value" id="gpu-util">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Temperature</span>
+                    <span class="metric-value" id="gpu-temp">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Power</span>
+                    <span class="metric-value" id="gpu-power">-</span>
+                </div>
+                <div class="memory-container">
+                    <div class="memory-header">
+                        <span>VRAM</span>
+                        <span id="vram-label">- / -</span>
+                    </div>
+                    <div class="memory-bar">
+                        <div class="memory-fill" id="vram-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 GPU History</h2>
+                <div class="chart-container">
+                    <canvas id="gpu-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚡ Ollama Models</h2>
+                <div class="proc-list" id="ollama-list">
+                    <div class="proc-item"><span class="metric-label">Connecting...</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔥 GPU Processes</h2>
+                <div class="proc-list" id="gpu-procs">
+                    <div class="proc-item"><span class="metric-label">No data</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Observatory -->
+        <section class="observatory-section">
+            <div class="swarm-viz">
+                <h2>🕸️ SWARM Topology</h2>
+                <div class="flow-tier">
+                    <div class="agent-node coordinator" id="node-main" onclick="pingAgent('main')">
+                        <div class="agent-status" id="status-main"></div>
+                        <div class="agent-avatar kimi">🧠</div>
+                        <div class="agent-name">Lumen</div>
+                        <div class="agent-model">kimi-2.5</div>
+                    </div>
+                </div>
+                <div class="flow-tier">
+                    <span class="arrow-down">↓</span>
+                </div>
+                <div class="flow-tier">
+                    <div class="agent-node worker" id="node-research" onclick="pingAgent('research')">
+                        <div class="agent-status" id="status-research"></div>
+                        <div class="agent-avatar qwen">🔍</div>
+                        <div class="agent-name">Research</div>
+                        <div class="agent-model">qwen32</div>
+                    </div>
+                    <div class="agent-node worker" id="node-build" onclick="pingAgent('build')">
+                        <div class="agent-status" id="status-build"></div>
+                        <div class="agent-avatar qwen">🔨</div>
+                        <div class="agent-name">Build</div>
+                        <div class="agent-model">qwen32</div>
+                    </div>
+                    <div class="agent-node worker" id="node-create" onclick="pingAgent('create')">
+                        <div class="agent-status" id="status-create"></div>
+                        <div class="agent-avatar qwen">🎨</div>
+                        <div class="agent-name">Create</div>
+                        <div class="agent-model">qwen32</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <h3>Context</h3>
+                    <div class="stat-value" style="color: var(--qwen)">128K</div>
+                    <div class="stat-delta badge green">✓ limit</div>
+                </div>
+                <div class="stat-box">
+                    <h3>Agents</h3>
+                    <div class="stat-value" id="agent-count">4</div>
+                    <div class="stat-delta badge blue">SWARM</div>
+                </div>
+                <div class="stat-box">
+                    <h3>Latency</h3>
+                    <div class="stat-value" id="avg-lat">-</div>
+                    <div class="stat-delta badge orange">avg</div>
+                </div>
+                <div class="stat-box">
+                    <h3>Tokens/sec</h3>
+                    <div class="stat-value" style="color: var(--qwen)">35</div>
+                    <div class="stat-delta badge green">qwen32</div>
+                </div>
+            </div>
+
+            <div class="traces-panel">
+                <div class="traces-header">
+                    <h2>📊 Real-time Traces</h2>
+                    <div class="live-indicator">LIVE</div>
+                </div>
+                <div class="traces-list" id="traces-list">
+                    <div class="trace-row" style="justify-content: center; color: var(--text-secondary);">
+                        <span>Waiting for data...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats -->
+        <section class="stats-section">
+            <div class="card">
+                <h2>💰 Cost Tracking</h2>
+                <div class="cost-breakdown">
+                    <div class="cost-row">
+                        <span class="proc-name"><span class="cost-icon">☁️</span> Kimi Cloud</span>
+                        <span class="cost-value" id="cost-kimi">$0.00</span>
+                    </div>
+                    <div class="cost-row">
+                        <span class="proc-name"><span class="cost-icon">🏠</span> Qwen32 Local</span>
+                        <span class="cost-value" id="cost-qwen">$0.00</span>
+                    </div>
+                    <div class="cost-row">
+                        <span class="proc-name"><span class="cost-icon">🖼️</span> External APIs</span>
+                        <span class="cost-value" id="cost-api">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Agent Activity</h2>
+                <div class="chart-container">
+                    <canvas id="agent-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🏗️ Architecture</h2>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="metric-label">Cerebro</span>
+                        <span style="color: var(--kimi); font-weight: 600;">kimi-2.5</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="metric-label">Workers</span>
+                        <span style="color: var(--qwen); font-weight: 600;">qwen32 × 3</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="metric-label">GPU VRAM</span>
+                        <span class="metric-value">20GB</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="metric-label">Context</span>
+                        <span class="metric-value">128K tok</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="metric-label">Update</span>
+                        <span class="metric-value">500ms</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        // SocketIO real-time connection
+        const socket = io('http://127.0.0.1:8766');
+        const connStatus = document.getElementById('conn-dot') || document.getElementById('connection-dot');
+        const connText = document.getElementById('conn-text') || document.getElementById('connection-text');
+
+        socket.on('connect', () => {
+            console.log('✅ SocketIO Connected');
+            if (connStatus) {
+                connStatus.classList.remove('disconnected');
+                connStatus.style.background = '#00ff88';
+            }
+            if (connText) connText.textContent = 'Connected (SocketIO)';
+        });
+
+        socket.on('metrics', (data) => {
+            console.log('📊 Data:', data);
+            // Update GPU
+            if (data.gpu) {
+                const g = data.gpu;
+                const gpuDev = document.getElementById('gpu-dev') || document.getElementById('gpu-device');
+                const gpuUtil = document.getElementById('gpu-util');
+                const gpuTemp = document.getElementById('gpu-temp');
+                const vramBar = document.getElementById('vram-bar');
+                const vramText = document.getElementById('vram-text') || document.getElementById('vram-label');
+                
+                if (gpuDev) gpuDev.textContent = g.device || 'RTX 3090';
+                if (gpuUtil) gpuUtil.textContent = g.utilization + '%';
+                if (gpuTemp) gpuTemp.textContent = g.temperature + '°C';
+                if (vramBar && g.total_mb) {
+                    const pct = (g.used_mb / g.total_mb) * 100;
+                    vramBar.style.width = pct + '%';
+                }
+                if (vramText && g.total_mb) {
+                    vramText.textContent = (g.used_mb/1024).toFixed(1) + ' / ' + (g.total_mb/1024).toFixed(0) + ' GB';
+                }
+            }
+            // Update Ollama
+            const ollamaList = document.getElementById('ollama-list') || document.getElementById('ollama-models');
+            if (ollamaList && data.ollama_models) {
+                ollamaList.innerHTML = data.ollama_models.map(m => `<div class="proc-item"><span>🧠 ${m}</span></div>`).join('');
+            }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('❌ Disconnected');
+            if (connStatus) {
+                connStatus.classList.add('disconnected');
+                connStatus.style.background = '#ff4444';
+            }
+            if (connText) connText.textContent = 'Disconnected';
+        });
+    </script>
+</body>
+</html>

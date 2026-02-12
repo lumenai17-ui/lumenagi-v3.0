@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LumenAGI Mobile</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --accent-primary: #ff6b35;
+            --accent-secondary: #00ff88;
+            --accent-tertiary: #3b82f6;
+            --text-primary: #e0e0e0;
+            --text-secondary: #888;
+            --border: #2a2a3a;
+            --kimi: #3b82f6;
+            --qwen: #00ff88;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header Compacto */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .logo-text {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .status-pill {
+            padding: 0.25rem 0.6rem;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-secondary);
+            border-radius: 12px;
+            font-size: 0.65rem;
+            color: var(--accent-secondary);
+        }
+
+        /* Quick Stats - Grid 2x2 */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-value.success { color: var(--accent-secondary); }
+        .stat-value.warning { color: #ffaa00; }
+        .stat-value.danger { color: #ff4444; }
+
+        .stat-label {
+            font-size: 0.55rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-top: 0.2rem;
+        }
+
+        /* GPU Card */
+        .card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            margin: 0.5rem 1rem;
+            padding: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .bar-wrap {
+            margin: 0.6rem 0;
+        }
+
+        .bar-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .bar-bg {
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .bar-gpu {
+            background: linear-gradient(90deg, #00d4ff, #0099cc);
+        }
+
+        .bar-vram {
+            background: linear-gradient(90deg, #ff6b35, #ff8c5a);
+        }
+
+        .bar-ram {
+            background: linear-gradient(90deg, #00ff88, #00c853);
+        }
+
+        /* SWARM Compact */
+        .swarm-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        .agent-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 1rem 0.75rem;
+            border: 2px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .agent-card.active {
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.15);
+        }
+
+        .agent-card.coordinator {
+            border-color: var(--kimi);
+        }
+
+        .agent-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            background: var(--bg-secondary);
+        }
+
+        .agent-avatar.kimi {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .agent-avatar.qwen {
+            background: rgba(0, 255, 136, 0.2);
+        }
+
+        .agent-avatar.api {
+            background: rgba(255, 107, 53, 0.2);
+        }
+
+        .agent-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        .agent-model {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+        }
+
+        .agent-status {
+            font-size: 0.6rem;
+            color: var(--accent-secondary);
+            margin-top: 0.2rem;
+        }
+
+        .agent-status.idle {
+            color: var(--text-secondary);
+        }
+
+        /* Tokens List */
+        .token-list {
+            padding: 0.5rem 1rem;
+        }
+
+        .token-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .token-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .token-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-kimi {
+            background: var(--kimi);
+        }
+
+        .dot-qwen {
+            background: var(--qwen);
+        }
+
+        .dot-api {
+            background: var(--accent-primary);
+        }
+
+        .token-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .token-count {
+            font-size: 0.8rem;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-secondary);
+        }
+
+        /* Tasks Section */
+        .tasks-container {
+            margin: 0.5rem 1rem;
+        }
+
+        .task-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .task-tab {
+            flex: 1;
+            padding: 0.6rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-align: center;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .task-tab.active {
+            background: var(--accent-secondary);
+            color: var(--bg-primary);
+            font-weight: 600;
+            border-color: var(--accent-secondary);
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid transparent;
+        }
+
+        .task-item.active {
+            border-left-color: var(--accent-secondary);
+        }
+
+        .task-item.pending {
+            border-left-color: #ffaa00;
+        }
+
+        .task-status-dot {
+            font-size: 0.8rem;
+        }
+
+        .task-title {
+            flex: 1;
+            font-size: 0.85rem;
+        }
+
+        .task-priority {
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+        }
+
+        /* Footer Status */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-secondary);
+        }
+
+        .connection-dot.disconnected {
+            background: #ff4444;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Mini Chart */
+        .mini-chart {
+            padding: 0.5rem 1rem;
+        }
+
+        .chart-container {
+            height: 120px;
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 0.5rem;
+        }
+
+        /* Pull to refresh indicator */
+        .refresh-indicator {
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        /* Desktop warning */
+        @media (min-width: 1024px) {
+            body::before {
+                content: "📱 Usa la versión Desktop para pantallas grandes";
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: var(--accent-warning);
+                color: var(--bg-primary);
+                padding: 0.5rem;
+                text-align: center;
+                font-size: 0.75rem;
+                font-weight: 600;
+                z-index: 1000;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">🔮</div>
+            <div class="logo-text">LumenAGI</div>
+        </div>
+        <div class="status-pill" id="swarm-status">SWARM</div>
+    </header>
+
+    <!-- Quick Stats -->
+    <div class="quick-stats">
+        <div class="stat-card">
+            <div class="stat-value" id="gpu-temp">-°C</div>
+            <div class="stat-label">GPU</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value success" id="qwen-ram">20GB</div>
+            <div class="stat-label">VRAM</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="tokens-total">0</div>
+            <div class="stat-label">Tokens</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value warning" id="session-cost">$0.00</div>
+            <div class="stat-label">Costo</div>
+        </div>
+    </div>
+
+    <!-- GPU Status -->
+    <div class="card">
+        <div class="card-title">🎮 GPU RTX 3090</div>
+        <div class="bar-wrap">
+            <div class="bar-header">
+                <span>GPU Util</span>
+                <span id="gpu-util-text">0%</span>
+            </div>
+            <div class="bar-bg">
+                <div class="bar-fill bar-gpu" id="gpu-util-bar" style="width: 0%;"></div>
+            </div>
+        </div>
+        <div class="bar-wrap">
+            <div class="bar-header">
+                <span>VRAM</span>
+                <span id="vram-text">20/24GB</span>
+            </div>
+            <div class="bar-bg">
+                <div class="bar-fill bar-vram" id="vram-bar" style="width: 83%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SWARM Agents -->
+    <div class="swarm-grid">
+        <div class="agent-card coordinator" id="node-main">
+            <div class="agent-avatar kimi">🧠</div>
+            <div class="agent-name">Cerebro</div>
+            <div class="agent-model">Kimi 2.5</div>
+            <div class="agent-status idle" id="main-status">Idle</div>
+        </div>
+        <div class="agent-card" id="node-research">
+            <div class="agent-avatar api">🔍</div>
+            <div class="agent-name">Research</div>
+            <div class="agent-model">GPT-4o</div>
+            <div class="agent-status idle" id="research-status">Cloud</div>
+        </div>
+        <div class="agent-card" id="node-build">
+            <div class="agent-avatar qwen">🔨</div>
+            <div class="agent-name">Build</div>
+            <div class="agent-model">Qwen 32B</div>
+            <div class="agent-status idle" id="build-status">20GB VRAM</div>
+        </div>
+        <div class="agent-card" id="node-create">
+            <div class="agent-avatar qwen">🎨</div>
+            <div class="agent-name">Create</div>
+            <div class="agent-model">Qwen 32B</div>
+            <div class="agent-status idle" id="create-status">Ready</div>
+        </div>
+    </div>
+
+    <!-- Tokens -->
+    <div class="card">
+        <div class="card-title">🎫 Tokens</div>
+        <div class="token-list">
+            <div class="token-item">
+                <div class="token-info">
+                    <div class="token-dot dot-kimi"></div>
+                    <div class="token-name">Kimi</div>
+                </div>
+                <div class="token-count" id="tokens-kimi">0</div>
+            </div>
+            <div class="token-item">
+                <div class="token-info">
+                    <div class="token-dot dot-qwen"></div>
+                    <div class="token-name">Qwen</div>
+                </div>
+                <div class="token-count" id="tokens-qwen">0</div>
+            </div>
+            <div class="token-item">
+                <div class="token-info">
+                    <div class="token-dot dot-api"></div>
+                    <div class="token-name">GPT-4o</div>
+                </div>
+                <div class="token-count" id="tokens-gpt4o">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mini Chart -->
+    <div class="mini-chart">
+        <div class="chart-container">
+            <canvas id="activity-chart"></canvas>
+        </div>
+    </div>
+
+    <!-- Tasks -->
+    <div class="tasks-container">
+        <div class="card-title">📋 Tareas</div>
+        <div class="task-tabs">
+            <div class="task-tab active" onclick="switchTab('lumen')">Lumen</div>
+            <div class="task-tab" onclick="switchTab('humberto')">Tú</div>
+        </div>
+        <div id="tasks-list">
+            <div class="task-item active">
+                <span class="task-status-dot">●</span>
+                <span class="task-title">Dashboard mobile v1</span>
+            </div>
+            <div class="task-item pending">
+                <span class="task-status-dot">○</span>
+                <span class="task-title">Auto-start systemd</span>
+            </div>
+        </div>
+    </div>
+
+    <div style="height: 60px;"></div>
+
+    <footer class="footer">
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <div class="connection-dot" id="conn-dot"></div>
+            <span id="conn-text">Connecting...</span>
+        </div>
+        <span>v4.5 Mobile</span>
+    </footer>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://127.0.0.1:8766');
+        let activityChart;
+
+        function fmtNum(n) {
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+            if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+            return n.toString();
+        }
+
+        function initChart() {
+            activityChart = new Chart(document.getElementById('activity-chart'), {
+                type: 'line',
+                data: {
+                    labels: Array(30).fill(''),
+                    datasets: [{
+                        data: Array(30).fill(0),
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { beginAtZero: true, max: 100, ticks: { display: false }, grid: { color: '#2a2a3a' } }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        socket.on('connect', () => {
+            document.getElementById('conn-dot').classList.remove('disconnected');
+            document.getElementById('conn-text').textContent = 'Connected';
+            document.getElementById('swarm-status').textContent = 'SWARM 🟢';
+            initChart();
+        });
+
+        socket.on('metrics', (data) => {
+            if (data.gpu) {
+                document.getElementById('gpu-temp').textContent = data.gpu.temperature + '°C';
+                document.getElementById('gpu-util-text').textContent = data.gpu.utilization + '%';
+                document.getElementById('gpu-util-bar').style.width = data.gpu.utilization + '%';
+                document.getElementById('vram-text').textContent = (data.gpu.used_mb / 1024).toFixed(1) + '/24GB';
+            }
+
+            if (data.token_tracker) {
+                const tt = data.token_tracker;
+                const total = tt.kimi.input + tt.kimi.output + tt.qwen.input + tt.qwen.output + tt.gpt4o.input + tt.gpt4o.output;
+                document.getElementById('tokens-total').textContent = fmtNum(total);
+                document.getElementById('tokens-kimi').textContent = fmtNum(tt.kimi.input + tt.kimi.output);
+                document.getElementById('tokens-qwen').textContent = fmtNum(tt.qwen.input + tt.qwen.output);
+                document.getElementById('tokens-gpt4o').textContent = fmtNum(tt.gpt4o.input + tt.gpt4o.output);
+            }
+
+            if (data.costs) {
+                const total = data.costs.kimi + data.costs.gpt4o;
+                document.getElementById('session-cost').textContent = '$' + total.toFixed(2);
+            }
+
+            if (data.swarm) {
+                const swarm = data.swarm;
+                document.getElementById('main-status').textContent = swarm.coordinator.active ? '🟢 Active' : 'Idle';
+                document.getElementById('main-status').classList.toggle('idle', !swarm.coordinator.active);
+                document.getElementById('node-main').classList.toggle('active', swarm.coordinator.active);
+
+                document.getElementById('research-status').textContent = swarm.research.active ? '🟢 Cloud' : 'Cloud';
+                document.getElementById('node-research').classList.toggle('active', swarm.research.active);
+
+                document.getElementById('build-status').textContent = swarm.build.active ? '🟢 Working' : (swarm.build.vram_mb / 1024).toFixed(1) + 'GB VRAM';
+                document.getElementById('node-build').classList.toggle('active', swarm.build.active);
+
+                document.getElementById('create-status').textContent = swarm.create.active ? '🟢 Creating' : 'Ready';
+                document.getElementById('node-create').classList.toggle('active', swarm.create.active);
+            }
+
+            if (data.agent_activity && activityChart) {
+                activityChart.data.datasets[0].data = data.agent_activity.qwen.slice(-30);
+                activityChart.update('none');
+            }
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('conn-dot').classList.add('disconnected');
+            document.getElementById('conn-text').textContent = 'Disconnected';
+            document.getElementById('swarm-status').textContent = 'SWARM 🔴';
+        });
+
+        function switchTab(tab) {
+            document.querySelectorAll('.task-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            // Aquí cargarías tareas de Lumen o de Notion según el tab
+        }
+
+        // Pull to refresh simulation
+        let touchStartY = 0;
+        document.addEventListener('touchstart', e => {
+            touchStartY = e.touches[0].clientY;
+        });
+
+        document.addEventListener('touchend', e => {
+            const touchEndY = e.changedTouches[0].clientY;
+            const diff = touchEndY - touchStartY;
+            if (diff > 100 && window.scrollY === 0) {
+                socket.connect();
+            }
+        });
+    </script>
+</body>
+</html>

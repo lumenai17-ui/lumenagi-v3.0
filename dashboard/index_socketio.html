@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LumenAGI v4.1 — Realtime Monitor</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'SF Mono', monospace; 
+            background: #0a0a0f; 
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2a2a3a;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .title { font-size: 2rem; color: #ff6b35; }
+        .title span { color: #00ff88; }
+        .status { 
+            display: flex;
+            align-items: center; 
+            gap: 8px;
+            padding: 8px 16px;
+            background: #1a1a2e;
+            border-radius: 20px;
+            border: 1px solid #00ff88;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .panel { background: #1a1a2e; border-radius: 12px; padding: 20px; border: 1px solid #2a2a3a; }
+        .panel h2 { font-size: 1rem; color: #888; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a2a3a; }
+        .metric:last-child { border-bottom: none; }
+        .metric-label { color: #888; }
+        .metric-value { color: #fff; font-weight: 600; }
+        .metric-value.good { color: #00ff88; }
+        .metric-value.warn { color: #ffaa00; }
+        .metric-value.crit { color: #ff4444; }
+        
+        .bar-container { margin-top: 15px; }
+        .bar-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; margin-bottom: 5px; }
+        .bar { height: 12px; background: #0a0a0f; border-radius: 6px; overflow: hidden; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #00c853); border-radius: 6px; transition: width 1s ease; }
+        .bar-fill.warn { background: linear-gradient(90deg, #ffaa00, #ff6d00); }
+        .bar-fill.crit { background: linear-gradient(90deg, #ff4444, #cc0000); }
+        
+        .log { 
+            background: #0a0a0f; 
+            border-radius: 8px; 
+            padding: 10px; 
+            font-size: 0.85rem; 
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .log-entry { padding: 4px 0; border-bottom: 1px solid #1a1a2e; }
+        .log-entry:last-child { border-bottom: none; }
+        .timestamp { color: #ff6b35; }
+        
+        .swarm { display: flex; gap: 20px; justify-content: center; margin-top: 10px; }
+        .agent { text-align: center; padding: 15px; background: #0a0a0f; border-radius: 10px; border: 2px solid #3b82f6; }
+        .agent.worker { border-color: #00ff88; }
+        .agent-icon { font-size: 1.5rem; margin-bottom: 5px; }
+        .agent-name { font-weight: 600; }
+        .agent-model { font-size: 0.75rem; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">Lumen<span>AGI</span> v4.1</div>
+        <div class="status">
+            <div class="status-dot"></div>
+            <span id="conn-status">Connecting...</span>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <h2>🎮 GPU Telemetry</h2>
+            <div class="metric">
+                <span class="metric-label">Device</span>
+                <span class="metric-value" id="gpu-device">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Utilization</span>
+                <span class="metric-value" id="gpu-util">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Temperature</span>
+                <span class="metric-value" id="gpu-temp">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Power</span>
+                <span class="metric-value" id="gpu-power">-</span>
+            </div>
+            <div class="bar-container">
+                <div class="bar-header">
+                    <span>VRAM Usage</span>
+                    <span id="vram-text">- / -</span>
+                </div>
+                <div class="bar">
+                    <div class="bar-fill" id="vram-bar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>⚡ System Status</h2>
+            <div class="metric">
+                <span class="metric-label">Ollama Models</span>
+                <span class="metric-value good" id="ollama-count">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Last Update</span>
+                <span class="metric-value" id="last-update">-</span>
+            </div>
+            <div class="swarm">
+                <div class="agent">
+                    <div class="agent-icon">🧠</div>
+                    <div class="agent-name">Lumen</div>
+                    <div class="agent-model">kimi-2.5</div>
+                </div>
+                <div class="agent worker">
+                    <div class="agent-icon">🔍</div>
+                    <div class="agent-name">Research</div>
+                    <div class="agent-model">qwen32</div>
+                </div>
+                <div class="agent worker">
+                    <div class="agent-icon">🔨</div>
+                    <div class="agent-name">Build</div>
+                    <div class="agent-model">qwen32</div>
+                </div>
+                <div class="agent worker">
+                    <div class="agent-icon">🎨</div>
+                    <div class="agent-name">Create</div>
+                    <div class="agent-model">qwen32</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" style="grid-column: 1 / -1;">
+            <h2>📊 Live Log</h2>
+            <div class="log" id="log">
+                <div class="log-entry"><span class="timestamp">--:--:--</span> Connecting to server...</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+const socket = io('http://127.0.0.1:8766');
+const logContainer = document.getElementById('log');
+let logEntries = [];
+
+function addLog(msg) {
+    const time = new Date().toLocaleTimeString();
+    const entry = `<div class="log-entry"><span class="timestamp">${time}</span> ${msg}</div>`;
+    logEntries.push(entry);
+    if (logEntries.length > 20) logEntries.shift();
+    logContainer.innerHTML = logEntries.join('');
+    logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+socket.on('connect', () => {
+    console.log('✅ Connected');
+    document.getElementById('conn-status').textContent = 'LIVE (1s updates)';
+    addLog('Connected to server');
+});
+
+socket.on('metrics', (data) => {
+    console.log('📊 Metrics:', data);
+    
+    // GPU
+    if (data.gpu) {
+        const g = data.gpu;
+        document.getElementById('gpu-device').textContent = g.device || 'RTX 3090';
+        
+        const utilEl = document.getElementById('gpu-util');
+        utilEl.textContent = g.utilization + '%';
+        utilEl.className = 'metric-value ' + (g.utilization > 80 ? 'crit' : g.utilization > 50 ? 'warn' : 'good');
+        
+        const tempEl = document.getElementById('gpu-temp');
+        tempEl.textContent = g.temperature + '°C';
+        tempEl.className = 'metric-value ' + (g.temperature > 80 ? 'crit' : g.temperature > 70 ? 'warn' : '');
+        
+        document.getElementById('gpu-power').textContent = g.power_draw.toFixed(1) + 'W';
+        
+        // VRAM bar
+        const usedGB = (g.used_mb / 1024).toFixed(1);
+        const totalGB = (g.total_mb / 1024).toFixed(0);
+        const pct = (g.used_mb / g.total_mb) * 100;
+        
+        document.getElementById('vram-text').textContent = `${usedGB} / ${totalGB} GB`;
+        const bar = document.getElementById('vram-bar');
+        bar.style.width = pct + '%';
+        bar.className = 'bar-fill ' + (pct > 85 ? 'crit' : pct > 70 ? 'warn' : '');
+        
+        addLog(`GPU: ${g.utilization}% | ${g.temperature}°C | VRAM ${usedGB}GB`);
+    }
+    
+    // Ollama
+    if (data.ollama_models) {
+        document.getElementById('ollama-count').textContent = data.ollama_models.length;
+        if (data.ollama_models.length > 0) {
+            addLog(`Models: ${data.ollama_models.join(', ')}`);
+        }
+    }
+    
+    // Timestamp
+    document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+});
+
+socket.on('disconnect', () => {
+    document.getElementById('conn-status').textContent = 'Disconnected';
+    addLog('Disconnected from server');
+});
+
+socket.on('connect_error', (err) => {
+    console.error('Connection error:', err);
+    addLog('Connection error: ' + err.message);
+});
+</script>
+</body>
+</html>
