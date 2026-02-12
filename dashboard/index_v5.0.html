@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumenAGI v5.0 | Fusion Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-elevated: #252542;
+            --accent-primary: #ff6b35;
+            --accent-secondary: #00ff88;
+            --accent-tertiary: #3b82f6;
+            --accent-warning: #ffaa00;
+            --accent-danger: #ff4444;
+            --text-primary: #e0e0e0;
+            --text-secondary: #888;
+            --border: #2a2a3a;
+            --kimi: #3b82f6;
+            --qwen: #00ff88;
+            --api: #ff6b35;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif; 
+            background: var(--bg-primary); 
+            color: var(--text-primary); 
+            height: 100vh; 
+            width: 100vw;
+            overflow: hidden;
+            line-height: 1.2;
+        }
+        
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 0.4rem 1.25rem; 
+            border-bottom: 1px solid var(--border); 
+            background: var(--bg-secondary); 
+            height: 44px;
+            flex-shrink: 0;
+        }
+        .logo { display: flex; align-items: center; gap: 0.6rem; }
+        .logo-icon { 
+            width: 28px; height: 28px; 
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); 
+            border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; 
+            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+        }
+        .logo-text { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.5px; }
+        .logo-text span { color: var(--accent-primary); }
+        .status-pill { 
+            display: flex; align-items: center; gap: 0.35rem; 
+            padding: 0.25rem 0.6rem; 
+            background: rgba(0, 255, 136, 0.08); 
+            border: 1px solid var(--accent-secondary); 
+            border-radius: 12px; font-size: 0.7rem; font-weight: 500;
+        }
+        .status-pill::before { content: ''; width: 5px; height: 5px; background: var(--accent-secondary); border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.8); } }
+        .connection-status { display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-secondary); }
+        .connection-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-secondary); transition: var(--transition); }
+        .connection-dot.disconnected { background: var(--accent-danger); animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
+        .main-grid { 
+            display: grid; 
+            grid-template-columns: 240px 1fr 340px; 
+            gap: 0.6rem; 
+            padding: 0.6rem; 
+            height: calc(100vh - 44px);
+            max-width: 1920px; 
+            margin: 0 auto; 
+        }
+        
+        .col-left, .col-center, .col-right { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 0.5rem;
+            min-height: 0;
+        }
+        
+        .card { 
+            background: var(--bg-card); 
+            border-radius: 10px; 
+            padding: 0.55rem 0.7rem; 
+            border: 1px solid var(--border); 
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+        .card:hover { border-color: rgba(0, 255, 136, 0.3); }
+        .card h2 { 
+            font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.2px; 
+            color: var(--text-secondary); margin-bottom: 0.4rem; 
+            display: flex; align-items: center; gap: 0.35rem; font-weight: 600;
+        }
+        
+        /* CPU Display Mejorado */
+        .cpu-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.4rem;
+            margin-bottom: 0.3rem;
+        }
+        .cpu-metric {
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            padding: 0.4rem;
+            text-align: center;
+        }
+        .cpu-label {
+            font-size: 0.55rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.15rem;
+        }
+        .cpu-value {
+            font-size: 1rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .cpu-value.success { color: var(--accent-secondary); }
+        .cpu-value.warning { color: var(--accent-warning); }
+        .cpu-value.danger { color: var(--accent-danger); }
+        
+        /* GPU con barras */
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0.25rem 0;
+            font-size: 0.7rem;
+        }
+        .metric-row .label { color: var(--text-secondary); font-size: 0.6rem; }
+        .metric-row .value { font-weight: 600; font-variant-numeric: tabular-nums; }
+        
+        .bar-container { margin: 0.35rem 0; }
+        .bar-header {
+            display: flex; justify-content: space-between;
+            font-size: 0.55rem; color: var(--text-secondary);
+            margin-bottom: 0.2rem;
+        }
+        .bar-bg {
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        .bar-fill.gpu { background: linear-gradient(90deg, #00d4ff, #0099cc); }
+        .bar-fill.vram { background: linear-gradient(90deg, #ff6b35, #ff8c5a); }
+        .bar-fill.caution { background: linear-gradient(90deg, #ffaa00, #ffcc00); }
+        .bar-fill.critical { background: linear-gradient(90deg, #ff4444, #ff6666); }
+        
+        .chart-container { height: 55px; margin-top: 0.2rem; }
+        
+        /* SWARM Compacto */
+        .swarm-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            flex: 0 0 auto;
+        }
+        .swarm-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.4rem;
+        }
+        .agent-box {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 0.4rem;
+            text-align: center;
+            border: 2px solid var(--border);
+            transition: var(--transition);
+            position: relative;
+        }
+        .agent-box:hover { border-color: rgba(0, 255, 136, 0.3); }
+        .agent-box.active { border-color: var(--accent-secondary); }
+        .agent-box.active::after {
+            content: '●';
+            position: absolute;
+            top: -5px; right: -5px;
+            font-size: 8px;
+            color: var(--accent-secondary);
+            animation: pulse 1s infinite;
+        }
+        .agent-box.coordinator { border-color: rgba(59, 130, 246, 0.4); }
+        .agent-ico { font-size: 1rem; margin-bottom: 0.2rem; }
+        .agent-nm { font-size: 0.6rem; font-weight: 600; }
+        .agent-md { font-size: 0.5rem; color: var(--text-secondary); }
+        .agent-st { font-size: 0.5rem; color: var(--accent-secondary); margin-top: 0.1rem; }
+        
+        /* Token Table Mejorada */
+        .token-table {
+            width: 100%;
+            font-size: 0.7rem;
+            border-collapse: collapse;
+        }
+        .token-table th {
+            text-align: left;
+            font-size: 0.55rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.3rem 0.2rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .token-table th:last-child { text-align: right; }
+        .token-table td {
+            padding: 0.35rem 0.2rem;
+            border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+        }
+        .token-table tr:last-child td { border-bottom: none; }
+        .token-table td:last-child { text-align: right; font-weight: 600; }
+        .token-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 0.3rem; }
+        .dot-kimi { background: var(--kimi); }
+        .dot-qwen { background: var(--qwen); }
+        .dot-gpt4o { background: var(--api); }
+        
+        /* Cost List */
+        .cost-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+        }
+        .cost-label { display: flex; align-items: center; gap: 0.3rem; }
+        .cost-value { font-family: 'SF Mono', monospace; font-weight: 600; text-align: right; }
+        .cost-value.free { color: var(--accent-secondary); }
+        .cost-value.paid { color: var(--text-primary); }
+        .cost-value.total { color: var(--accent-primary); font-weight: 700; font-size: 0.8rem; }
+        .cost-row-total {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 5px;
+            padding: 0.3rem 0.4rem;
+            margin-top: 0.3rem;
+        }
+        
+        /* Task Manager */
+        .tasks-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            flex: 1;
+            min-height: 0;
+        }
+        .task-column {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .task-header {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .task-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .task-item {
+            background: var(--bg-card);
+            border-radius: 5px;
+            padding: 0.35rem 0.45rem;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            border-left: 2px solid transparent;
+        }
+        .task-item.pending { border-left-color: var(--accent-warning); }
+        .task-item.active { border-left-color: var(--accent-secondary); }
+        .task-item.done { border-left-color: var(--kimi); opacity: 0.6; }
+        .task-status { font-size: 0.65rem; }
+        .task-pending { color: var(--accent-warning); }
+        .task-active { color: var(--accent-secondary); }
+        .task-done { color: var(--kimi); }
+        
+        /* Network & Stats */
+        .mini-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.3rem;
+        }
+        .mini-box {
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            padding: 0.35rem;
+            text-align: center;
+        }
+        .mini-label { font-size: 0.5rem; color: var(--text-secondary); text-transform: uppercase; }
+        .mini-value { font-size: 0.85rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        
+        .network-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+        }
+        .net-box {
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            padding: 0.4rem;
+            text-align: center;
+        }
+        .net-label { font-size: 0.55rem; color: var(--text-secondary); }
+        .net-value { font-size: 0.9rem; font-weight: 700; }
+        
+        /* Badge */
+        .badge { 
+            display: inline-flex; align-items: center; gap: 0.2rem; 
+            padding: 0.12rem 0.3rem; border-radius: 3px; font-size: 0.55rem; font-weight: 600; 
+        }
+        .badge.green { background: rgba(0, 255, 136, 0.12); color: var(--accent-secondary); }
+        .badge.blue { background: rgba(59, 130, 246, 0.12); color: var(--kimi); }
+        
+        .traces-compact {
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 0.65rem;
+        }
+        .trace-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.2rem 0;
+            border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+        }
+        .trace-item:last-child { border-bottom: none; }
+        .trace-icon { font-size: 0.7rem; }
+        .trace-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .trace-agent { font-size: 0.55rem; color: var(--text-secondary); }
+        
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">🔮</div>
+            <div class="logo-text">Lumen<span>AGI</span> v5.0</div>
+        </div>
+        <div class="status-pill">SWARM Active</div>
+        <div class="connection-status">
+            <div class="connection-dot" id="conn-dot"></div>
+            <span id="conn-text">Connecting...</span>
+        </div>
+    </header>
+
+    <div class="main-grid">
+        <!-- LEFT COLUMN: Hardware -->
+        <section class="col-left">
+            <!-- CPU Display Mejorado -->
+            <div class="card">
+                <h2>💻 CPU & System</h2>
+                <div class="cpu-display">
+                    <div class="cpu-metric">
+                        <div class="cpu-label">CPU</div>
+                        <div class="cpu-value" id="cpu-pct">0%</div>
+                    </div>
+                    <div class="cpu-metric">
+                        <div class="cpu-label">RAM</div>
+                        <div class="cpu-value" id="ram-pct">0%</div>
+                    </div>
+                    <div class="cpu-metric">
+                        <div class="cpu-label">Disk</div>
+                        <div class="cpu-value" id="disk-pct">0%</div>
+                    </div>
+                </div>
+                <div class="bar-container">
+                    <div class="bar-bg">
+                        <div class="bar-fill" id="ram-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GPU Telemetry -->
+            <div class="card">
+                <h2>🎮 GPU RTX 3090</h2>
+                <div class="metric-row">
+                    <span class="label">Temp</span>
+                    <span class="value" id="gpu-temp">-°C</span>
+                </div>
+                <div class="metric-row">
+                    <span class="label">Power</span>
+                    <span class="value" id="gpu-power">-W</span>
+                </div>
+                
+                <div class="bar-container">
+                    <div class="bar-header">
+                        <span>GPU Util</span>
+                        <span id="gpu-util-text">0%</span>
+                    </div>
+                    <div class="bar-bg">
+                        <div class="bar-fill gpu" id="gpu-util-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div class="bar-container">
+                    <div class="bar-header">
+                        <span>VRAM</span>
+                        <span id="vram-text">-/-GB</span>
+                    </div>
+                    <div class="bar-bg">
+                        <div class="bar-fill vram" id="vram-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GPU History -->
+            <div class="card">
+                <h2>📈 GPU History</h2>
+                <div class="chart-container">
+                    <canvas id="gpu-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Network -->
+            <div class="card">
+                <h2>🌐 Network</h2>
+                <div class="network-pair">
+                    <div class="net-box">
+                        <div class="net-label">⬆️ Up</div>
+                        <div class="net-value" id="net-up">0.0</div>
+                    </div>
+                    <div class="net-box">
+                        <div class="net-label">⬇️ Down</div>
+                        <div class="net-value" id="net-down">0.0</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CENTER COLUMN: SWARM & Stats -->
+        <section class="col-center">
+            <!-- SWARM Topology Compacto -->
+            <div class="swarm-card">
+                <h2>🕸️ SWARM Topology</h2>
+                <div class="swarm-grid">
+                    <div class="agent-box coordinator" id="agent-main">
+                        <div class="agent-ico">🧠</div>
+                        <div class="agent-nm">Lumen</div>
+                        <div class="agent-md">kimi-2.5</div>
+                        <div class="agent-st" id="main-status">Idle</div>
+                    </div>
+                    <div class="agent-box" id="agent-research">
+                        <div class="agent-ico">🔍</div>
+                        <div class="agent-nm">Research</div>
+                        <div class="agent-md">gpt-4o</div>
+                        <div class="agent-st" id="research-status">Cloud</div>
+                    </div>
+                    <div class="agent-box" id="agent-build">
+                        <div class="agent-ico">🔨</div>
+                        <div class="agent-nm">Build</div>
+                        <div class="agent-md">qwen32</div>
+                        <div class="agent-st" id="build-status">Loading...</div>
+                    </div>
+                    <div class="agent-box" id="agent-create">
+                        <div class="agent-ico">🎨</div>
+                        <div class="agent-nm">Create</div>
+                        <div class="agent-md">qwen32</div>
+                        <div class="agent-st" id="create-status">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card">
+                <h2>📊 Session Stats</h2>
+                <div class="mini-grid">
+                    <div class="mini-box">
+                        <div class="mini-label">Context</div>
+                        <div class="mini-value" style="color: var(--qwen);">128K</div>
+                    </div>
+                    <div class="mini-box">
+                        <div class="mini-label">Agents</div>
+                        <div class="mini-value">4</div>
+                    </div>
+                    <div class="mini-box">
+                        <div class="mini-label">Tok/s</div>
+                        <div class="mini-value" style="color: var(--accent-secondary);">35</div>
+                    </div>
+                    <div class="mini-box">
+                        <div class="mini-label">Cost</div>
+                        <div class="mini-value" id="mini-cost" style="color: var(--accent-primary);">$0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Traces -->
+            <div class="card">
+                <h2>📡 Real-time Traces <span class="badge green">LIVE</span></h2>
+                <div class="traces-compact" id="traces-list">
+                    <div style="color: var(--text-secondary); font-size: 0.65rem;">Waiting for activity...</div>
+                </div>
+            </div>
+
+            <!-- Agent Activity Chart -->
+            <div class="card" style="flex: 1; min-height: 0;">
+                <h2>📈 Agent Activity</h2>
+                <div class="chart-container">
+                    <canvas id="agent-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN: Tokens, Costs, Tasks -->
+        <section class="col-right">
+            <!-- Token Tracking - Tabla mejorada -->
+            <div class="card">
+                <h2>🎫 Token Tracking</h2>
+                <table class="token-table">
+                    <thead>
+                        <tr>
+                            <th>Agent</th>
+                            <th>In</th>
+                            <th>Out</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="token-dot dot-kimi"></span>Kimi</td>
+                            <td id="tokens-kimi-in">0</td>
+                            <td id="tokens-kimi-out">0</td>
+                            <td id="tokens-kimi-total">0</td>
+                        </tr>
+                        <tr>
+                            <td><span class="token-dot dot-qwen"></span>Qwen32</td>
+                            <td id="tokens-qwen-in">0</td>
+                            <td id="tokens-qwen-out">0</td>
+                            <td id="tokens-qwen-total">0</td>
+                        </tr>
+                        <tr>
+                            <td><span class="token-dot dot-gpt4o"></span>GPT-4o</td>
+                            <td id="tokens-gpt4o-in">0</td>
+                            <td id="tokens-gpt4o-out">0</td>
+                            <td id="tokens-gpt4o-total">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Cost Tracking -->
+            <div class="card">
+                <h2>💰 Cost Tracking</h2>
+                <div class="cost-grid">
+                    <span class="cost-label">☁️ Kimi Cloud</span>
+                    <span class="cost-value paid" id="cost-kimi">$0.0000</span>
+                    <span class="cost-label">🏠 Qwen32 Local</span>
+                    <span class="cost-value free" id="cost-qwen">FREE</span>
+                    <span class="cost-label">🖼️ GPT-4o API</span>
+                    <span class="cost-value paid" id="cost-gpt4o">$0.0000</span>
+                    <div class="cost-row-total">
+                        <span><strong>💵 TOTAL</strong></span>
+                        <span class="cost-value total" id="cost-total">$0.0000</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Manager (Reemplaza Ollama Models) -->
+            <div class="card" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                <h2>📋 Task Manager</h2>
+                <div class="tasks-container">
+                    <!-- Mis Tareas (Lumen) - En vivo -->
+                    <div class="task-column">
+                        <div class="task-header">
+                            <span>🤖</span> Mis Tareas (Lumen)
+                        </div>
+                        <div class="task-list" id="lumen-tasks">
+                            <div class="task-item active">
+                                <span class="task-status task-active">●</span>
+                                <span>Dashboard v5.0 rebuild</span>
+                            </div>
+                            <div class="task-item pending">
+                                <span class="task-status task-pending">○</span>
+                                <span>Keep Qwen32 alive</span>
+                            </div>
+                            <div class="task-item done">
+                                <span class="task-status task-done">✓</span>
+                                <span>SWARM topology fix</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tus Tareas (Humberto) - Desde Notion -->
+                    <div class="task-column">
+                        <div class="task-header">
+                            <span>👤</span> Tus Tareas (Hb)
+                            <span style="margin-left: auto; font-size: 0.5rem; color: var(--text-secondary);">Notion →</span>
+                        </div>
+                        <div class="task-list" id="humberto-tasks">
+                            <div class="task-item pending">
+                                <span class="task-status task-pending">○</span>
+                                <span>Conectar Notion API</span>
+                            </div>
+                            <div class="task-item" style="color: var(--text-secondary); font-style: italic;">
+                                <span>📎</span>
+                                <span>Sincronizando...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://127.0.0.1:8766');
+        let gpuChart, agentChart;
+        
+        function fmtNum(n) {
+            if (n >= 1000000) return (n/1000000).toFixed(2) + 'M';
+            if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+            return n.toString();
+        }
+        
+        function initCharts() {
+            const gpuCtx = document.getElementById('gpu-chart').getContext('2d');
+            gpuChart = new Chart(gpuCtx, {
+                type: 'line',
+                data: {
+                    labels: Array(60).fill(''),
+                    datasets: [{
+                        data: Array(60).fill(0),
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 1.5
+                    }, {
+                        data: Array(60).fill(0),
+                        borderColor: '#ff6b35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 1.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { beginAtZero: true, max: 100, ticks: { color: '#666', font: { size: 7 } }, grid: { color: '#222' } }
+                    },
+                    animation: false
+                }
+            });
+            
+            const agentCtx = document.getElementById('agent-chart').getContext('2d');
+            agentChart = new Chart(agentCtx, {
+                type: 'line',
+                data: {
+                    labels: Array(60).fill(''),
+                    datasets: [{
+                        label: 'Qwen',
+                        data: Array(60).fill(0),
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 1.5
+                    }, {
+                        label: 'Kimi',
+                        data: Array(60).fill(0),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 1.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: true, labels: { color: '#888', font: { size: 8 }, boxWidth: 8, padding: 5 } }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: { beginAtZero: true, ticks: { color: '#666', font: { size: 7 } }, grid: { color: '#222' } }
+                    },
+                    animation: false
+                }
+            });
+        }
+        
+        socket.on('connect', () => {
+            document.getElementById('conn-dot').classList.remove('disconnected');
+            document.getElementById('conn-dot').style.background = '#00ff88';
+            document.getElementById('conn-text').textContent = 'Connected';
+            initCharts();
+        });
+        
+        socket.on('metrics', (data) => {
+            // System Stats
+            if (data.system) {
+                const s = data.system;
+                const cpuEl = document.getElementById('cpu-pct');
+                cpuEl.textContent = s.cpu.percent.toFixed(0) + '%';
+                cpuEl.className = 'cpu-value ' + (s.cpu.percent > 80 ? 'danger' : s.cpu.percent > 60 ? 'warning' : 'success');
+                
+                const ramEl = document.getElementById('ram-pct');
+                ramEl.textContent = s.ram.percent.toFixed(0) + '%';
+                ramEl.className = 'cpu-value ' + (s.ram.percent > 85 ? 'danger' : s.ram.percent > 70 ? 'warning' : 'success');
+                
+                document.getElementById('ram-bar').style.width = s.ram.percent + '%';
+                document.getElementById('ram-bar').className = 'bar-fill ' + (s.ram.percent > 85 ? 'critical' : s.ram.percent > 70 ? 'caution' : '');
+                
+                const diskEl = document.getElementById('disk-pct');
+                diskEl.textContent = s.disk.percent.toFixed(0) + '%';
+            }
+            
+            // GPU
+            if (data.gpu) {
+                const g = data.gpu;
+                const vramPct = (g.used_mb / g.total_mb) * 100;
+                
+                const tempEl = document.getElementById('gpu-temp');
+                tempEl.textContent = g.temperature + '°C';
+                tempEl.style.color = g.temperature > 80 ? '#ff4444' : g.temperature > 70 ? '#ffaa00' : '#00ff88';
+                
+                document.getElementById('gpu-power').textContent = g.power_draw.toFixed(0) + '/' + g.power_limit.toFixed(0) + 'W';
+                
+                document.getElementById('gpu-util-text').textContent = g.utilization + '%';
+                document.getElementById('gpu-util-bar').style.width = g.utilization + '%';
+                document.getElementById('gpu-util-bar').className = 'bar-fill gpu ' + (g.utilization > 80 ? 'critical' : g.utilization > 60 ? 'caution' : '');
+                
+                document.getElementById('vram-text').textContent = (g.used_mb/1024).toFixed(1) + '/' + (g.total_mb/1024).toFixed(0) + 'GB';
+                document.getElementById('vram-bar').style.width = vramPct + '%';
+            }
+            
+            // GPU History
+            if (data.gpu_history && gpuChart) {
+                gpuChart.data.datasets[0].data = data.gpu_history.map(h => h.utilization);
+                gpuChart.data.datasets[1].data = data.gpu_history.map(h => h.vram_pct);
+                gpuChart.update('none');
+            }
+            
+            // Network
+            if (data.network?.speed_mbps) {
+                document.getElementById('net-up').textContent = data.network.speed_mbps.up.toFixed(1);
+                document.getElementById('net-down').textContent = data.network.speed_mbps.down.toFixed(1);
+            }
+            
+            // SWARM
+            if (data.swarm) {
+                const swarm = data.swarm;
+                const agents = ['main', 'research', 'build', 'create'];
+                const swarmData = ['coordinator', 'research', 'build', 'create'];
+                
+                agents.forEach((agent, i) => {
+                    const el = document.getElementById('agent-' + agent);
+                    const statusEl = document.getElementById(agent + '-status');
+                    const data = swarm[swarmData[i]];
+                    
+                    if (data.active) {
+                        el.classList.add('active');
+                        statusEl.textContent = agent === 'main' ? '● Active' : agent === 'research' ? '● Cloud' : (data.vram_mb/1024).toFixed(1) + 'GB VRAM';
+                    } else {
+                        el.classList.remove('active');
+                        statusEl.textContent = 'Idle';
+                    }
+                });
+            }
+            
+            // Tokens
+            if (data.token_tracker) {
+                const tt = data.token_tracker;
+                document.getElementById('tokens-kimi-in').textContent = fmtNum(tt.kimi.input);
+                document.getElementById('tokens-kimi-out').textContent = fmtNum(tt.kimi.output);
+                document.getElementById('tokens-kimi-total').textContent = fmtNum(tt.kimi.input + tt.kimi.output);
+                
+                document.getElementById('tokens-qwen-in').textContent = fmtNum(tt.qwen.input);
+                document.getElementById('tokens-qwen-out').textContent = fmtNum(tt.qwen.output);
+                document.getElementById('tokens-qwen-total').textContent = fmtNum(tt.qwen.input + tt.qwen.output);
+                
+                document.getElementById('tokens-gpt4o-in').textContent = fmtNum(tt.gpt4o.input);
+                document.getElementById('tokens-gpt4o-out').textContent = fmtNum(tt.gpt4o.output);
+                document.getElementById('tokens-gpt4o-total').textContent = fmtNum(tt.gpt4o.input + tt.gpt4o.output);
+            }
+            
+            // Costs
+            if (data.costs) {
+                const c = data.costs;
+                const total = c.kimi + c.qwen + c.gpt4o;
+                document.getElementById('cost-kimi').textContent = '$' + c.kimi.toFixed(4);
+                document.getElementById('cost-qwen').textContent = 'FREE';
+                document.getElementById('cost-gpt4o').textContent = '$' + c.gpt4o.toFixed(4);
+                document.getElementById('cost-total').textContent = '$' + total.toFixed(4);
+                document.getElementById('mini-cost').textContent = '$' + total.toFixed(2);
+            }
+            
+            // Agent Chart
+            if (data.agent_activity && agentChart) {
+                agentChart.data.datasets[0].data = data.agent_activity.qwen;
+                agentChart.data.datasets[1].data = data.agent_activity.kimi;
+                agentChart.update('none');
+            }
+            
+            // Traces
+            if (data.traces?.length > 0) {
+                document.getElementById('traces-list').innerHTML = data.traces.slice().reverse().slice(0, 8).map(t => {
+                    const icon = t.status === 'running' ? '⏳' : '✅';
+                    return `<div class="trace-item">
+                        <span class="trace-icon">${icon}</span>
+                        <span class="trace-text">${t.task}</span>
+                        <span class="trace-agent">${t.agent}</span>
+                    </div>`;
+                }).join('');
+            }
+            
+            // Update Lumen tasks from traces
+            if (data.traces && data.traces.length > 0) {
+                updateLumenTasks(data.traces);
+            }
+        });
+        
+        function updateLumenTasks(traces) {
+            const lumenTasksEl = document.getElementById('lumen-tasks');
+            const recentTraces = traces.slice(-5).reverse();
+            
+            let html = '';
+            recentTraces.forEach(t => {
+                const statusClass = t.status === 'running' ? 'active' : t.status === 'completed' ? 'done' : 'pending';
+                const icon = t.status === 'running' ? '●' : t.status === 'completed' ? '✓' : '○';
+                const colorClass = t.status === 'running' ? 'task-active' : t.status === 'completed' ? 'task-done' : 'task-pending';
+                
+                html += `<div class="task-item ${statusClass}">
+                    <span class="task-status ${colorClass}">${icon}</span>
+                    <span>${t.task}</span>
+                </div>`;
+            });
+            
+            // Add default tasks if empty
+            if (recentTraces.length === 0) {
+                html = `<div class="task-item active">
+                    <span class="task-status task-active">●</span>
+                    <span>Dashboard monitoring</span>
+                </div>`;
+            }
+            
+            lumenTasksEl.innerHTML = html;
+        }
+        
+        socket.on('disconnect', () => {
+            document.getElementById('conn-dot').classList.add('disconnected');
+            document.getElementById('conn-text').textContent = 'Disconnected';
+        });
+    </script>
+</body>
+</html>
